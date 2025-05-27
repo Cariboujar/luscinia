@@ -1,3 +1,23 @@
+use std::{collections::BTreeMap, sync::OnceLock};
+
+pub static BUILTIN_FORMATS: OnceLock<BTreeMap<u8, NumFormat>> = OnceLock::new();
+pub fn builtin_formats() -> &'static BTreeMap<u8, NumFormat> {
+    BUILTIN_FORMATS.get_or_init(|| {
+        include_str!("builtin.tsv")
+            .lines()
+            .map(|line| {
+                let mut parts = line.split('\t');
+                let id = parts.next().unwrap().parse::<u8>().unwrap();
+                let format = NumfmtParser::new(parts.next().unwrap()).parse().unwrap();
+                (id, format)
+            })
+            .collect()
+    })
+}
+pub fn builtin_format(id: u8) -> Option<&'static NumFormat> {
+    builtin_formats().get(&id)
+}
+
 pub type PResult<T> = Result<T, peg::error::ParseError<peg::str::LineCol>>;
 
 pub enum NumFormat {
@@ -226,6 +246,12 @@ pub struct PartLocaleID {
     suffix: Option<Vec<u8>>,
 }
 
+// The comment "Line xx" refers to the line number
+// in the original ABNF specification.
+//
+// [MS-OE376] 2.1.739 Part 4 Section 3.8.30, numFmt (Number Format)
+//
+// https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/0e59abdb-7f4e-48fc-9b89-67832fa11789
 peg::parser! {
     grammar numfmt_parser() for str {
         pub rule all() -> NumFormat // Line 1
@@ -327,7 +353,7 @@ peg::parser! {
             = intl_numfmt_general() { NFGeneral {} }
 
         rule nf_number() -> NFNumber // Line 7
-            = nf_part_num() { NFNumber {} } // TODO
+            = nf_part_num() { NFNumber {} } // TODO: Line 13, behavior & validation
 
         rule nf_datatime_token() -> NFDateTimeToken // Line 8
             = y:nf_part_year() { NFDateTimeToken::Year(y) }
@@ -940,5 +966,14 @@ mod tests {
     fn test_one() {
         let res = parse_fmtstr("@@");
         assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_builtin_formats() {
+        let builtin_ids = [0];
+        for &id in builtin_ids.iter() {
+            let fmt: Option<&'static NumFormat> = builtin_format(id);
+            assert!(fmt.is_some(), "Builtin format with ID {} not found", id);
+        }
     }
 }
