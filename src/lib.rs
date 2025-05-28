@@ -20,6 +20,7 @@ pub fn builtin_format(id: u8) -> Option<&'static NumFormat> {
 
 pub type PResult<T> = Result<T, peg::error::ParseError<peg::str::LineCol>>;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum NumFormat {
     ConditionalGeneral(MaybeColored<(NFPartCondition, NFGeneral)>),
     AnyNoCond(AnyNoCond),
@@ -39,6 +40,7 @@ type AnyNoCond = MaybeColored<TextOr<NumberOrFracOrDt>>;
 type AnyNoTextNoCond = MaybeColored<NumberOrFracOrDt>;
 
 /// [NFDateTime] [NFGeneral] [NFDateTime]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DatetimeTuple(
     pub Option<NFDatetime>,
     pub Option<NFGeneral>,
@@ -46,6 +48,7 @@ pub struct DatetimeTuple(
 );
 
 /// TODO
+#[derive(Debug, PartialEq, Eq)]
 pub struct NFDatetime {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,20 +60,25 @@ pub enum NFDatetimeComponent {
     AMPM(AmPm),
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum TextOr<T> {
     Text(NFText),
     Other(T),
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub struct MaybeColored<T> {
     pub color: Option<NFPartColor>,
     pub inner: T,
 }
+
+#[derive(Debug, PartialEq, Eq)]
 pub struct MaybeConditional<T> {
     pub condition: Option<NFPartCondition>,
     pub inner: T,
 }
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum NumberOrFracOrDt {
     Number(NFNumber),
     Fraction(NFFraction),
@@ -78,16 +86,20 @@ pub enum NumberOrFracOrDt {
 }
 
 /// TODO
+#[derive(Debug, PartialEq, Eq)]
 pub struct NFGeneral {}
 
 /// TODO
+#[derive(Debug, PartialEq, Eq)]
 pub struct NFNumber {}
 
 /// TODO
+#[derive(Debug, PartialEq, Eq)]
 pub struct NFFraction {}
 
 /// true => @
 /// false => INTL-AMPM
+#[derive(Debug, PartialEq, Eq)]
 pub struct NFText {
     format: Vec<bool>,
 }
@@ -217,10 +229,19 @@ pub enum NFCondOperator {
 }
 
 /// [>=1.0]
+#[derive(Debug)]
 pub struct NFPartCondition {
     pub op: NFCondOperator,
     pub value: f64,
 }
+
+impl PartialEq for NFPartCondition {
+    fn eq(&self, other: &Self) -> bool {
+        self.op == other.op && self.value.to_bits() == other.value.to_bits()
+    }
+}
+
+impl Eq for NFPartCondition {}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AbsTimeToken {
@@ -965,6 +986,7 @@ mod tests {
     #[test]
     fn test_one() {
         let res = parse_fmtstr("@@");
+        println!("{:?}", res);
         assert!(res.is_ok());
     }
 
