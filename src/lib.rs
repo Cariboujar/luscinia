@@ -139,6 +139,15 @@ pub enum DigitPos {
     Separator(NumSeparator),
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DigitPosOrOther<T> {
+    Digit(DigitPos),
+    Other(T),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Percent {}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Sign {
@@ -417,8 +426,21 @@ peg::parser! {
         rule nf_fraction() -> () // Line 12
             = {} // TODO
 
-        rule nf_part_num() -> () // Line 13
-            = {} // TODO
+        rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
+            = tks:nf_part_num_tk2_or_percent()+ {
+                ?
+                if tks.first().is_some_and(|t| matches!(t, DigitPosOrOther::Other(_)))
+                    && tks.last().is_some_and(|t| matches!(t, DigitPosOrOther::Other(_)))
+                {
+                    Err("Invalid number format: percent sign at both ends")
+                } else {
+                    Ok(tks)
+                }
+            }
+
+            rule nf_part_num_tk2_or_percent() -> DigitPosOrOther<Percent> // Custom
+                = t:nf_part_num_token2() { DigitPosOrOther::Digit(t) }
+                / ascii_percent_sign() { DigitPosOrOther::Other(Percent {}) }
 
         rule nf_part_exponential() -> Sign // Line 14
             = ascii_capital_letter_e() sgn:nf_part_sign() { sgn }
