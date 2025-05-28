@@ -13,8 +13,9 @@ pub fn builtin_formats() -> &'static BTreeMap<u8, NumFormat> {
                 let mut parts = line.split('\t');
                 let id = parts.next().unwrap().parse::<u8>().unwrap();
                 let str_format = parts.next().unwrap();
-                println!("{}", str_format);
+                // println!("\n{}", str_format);
                 let format = NumfmtParser::new(str_format).parse().unwrap();
+                // println!("{}", format.pretty());
                 (id, format)
             })
             .collect()

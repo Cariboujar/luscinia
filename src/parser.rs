@@ -48,8 +48,10 @@ peg::parser! {
                 )
             }
             / f:nf_any_no_cond() { NumFormat::AnyNoCond(f) }
-            / color:nf_part_color()? cond:nf_part_cond() g:nf_general() {
-                NumFormat::ConditionalGeneral(MaybeColored {
+            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? cond:nf_part_cond() g:nf_general() {
+                NumFormat::ConditionalGeneral(SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
                     inner: (cond, g),
                 })
@@ -60,7 +62,13 @@ peg::parser! {
                 / f:nf_general() { TextOr::Other(f) }
 
             rule num_or_frac_or_dt() -> NumberOrFracOrDt // Custom
-                = quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
+                = quiet!{
+                    ascii_left_parenthesis()
+                    inner_num:nf_number()
+                    ascii_right_parenthesis()
+                    { NumberOrFracOrDt::ParenthesizedNumber(inner_num) }
+                  }
+                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
                 / n:nf_number() { NumberOrFracOrDt::Number(n) }
                 / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
 
@@ -70,50 +78,56 @@ peg::parser! {
                 }
 
         rule nf_any() -> Any // Line 2
-            = color:nf_part_color()? text:nf_text() {
-                MaybeColored {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
+                Any::Text(SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
-                    inner: TextOr::Text(text),
-                }
+                    inner: text,
+                })
             }
-            / color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
-                MaybeColored {
+            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
+                Any::Other(SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
-                    inner: TextOr::Other(MaybeConditional {
-                        condition,
-                        inner: data,
-                    }),
-                }
+                    inner: AnyInner::ConditionalData(condition, data),
+                })
             }
 
         rule nf_any_no_text() -> AnyNoText // Line 3
-            = color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
-                MaybeColored {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
+                SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
-                    inner: MaybeConditional {
-                        condition,
-                        inner: data,
-                    },
+                    inner: AnyInner::ConditionalData(condition, data),
                 }
             }
 
         rule nf_any_no_cond() -> AnyNoCond // Line 4
-            = color:nf_part_color()? text:nf_text() {
-                MaybeColored {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
+                SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
                     inner: TextOr::Text(text),
                 }
             }
-            / color:nf_part_color()? data:num_or_frac_or_dt() {
-                MaybeColored {
+            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
+                SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
                     inner: TextOr::Other(data),
                 }
             }
 
         rule nf_any_no_text_no_cond() -> AnyNoTextNoCond // Line 5
-            = color:nf_part_color()? data:num_or_frac_or_dt() {
-                MaybeColored {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
+                SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
                     color,
                     inner: data,
                 }
@@ -123,11 +137,12 @@ peg::parser! {
             = intl_numfmt_general() { NFGeneral {} }
 
         rule nf_number() -> NFNumber // Line 7
-            = part1:nf_part_num() exp:(scientific_notation())? percent:ascii_percent_sign()? {
+            = part1:nf_part_num() exp:(scientific_notation())? {
+                let has_percent = part1.iter().any(|token| matches!(token, DigitPosOrOther::Other(Percent {})));
                 NFNumber {
                     num_part: part1,
                     exp_part: exp,
-                    has_percent: percent.is_some()
+                    has_percent,
                 }
             }
 
@@ -136,12 +151,15 @@ peg::parser! {
                 / expected!("scientific notation (E+n or E-n)")
 
         rule nf_datatime_token() -> NFDateTimeToken // Line 8
-            = y:nf_part_year() { NFDateTimeToken::Year(y) }
+            = eg:nf_part_era_g() { NFDateTimeToken::EraG(eg) }
+            / ey:nf_part_era_year() { NFDateTimeToken::EraYear(ey) }
+            / y:nf_part_year() { NFDateTimeToken::Year(y) }
             / m:nf_part_month() { NFDateTimeToken::Month(m) }
             / d:nf_part_day() { NFDateTimeToken::Day(d) }
             / h:nf_part_hour() { NFDateTimeToken::Hour(h) }
             / m:nf_part_minute() { NFDateTimeToken::Minute(m) }
             / s:nf_part_second() { NFDateTimeToken::Second(s) }
+            / cb:nf_part_calendar_b() { NFDateTimeToken::CalendarB(cb) }
             / a:nf_abs_time_token() { NFDateTimeToken::Abs(a) }
 
         rule nf_abs_time_token() -> AbsTimeToken // Line 9
@@ -168,19 +186,21 @@ peg::parser! {
                 / intl_char_date_sep() { NFDatetimeComponent::DateSeparator }
                 / intl_char_time_sep() { NFDatetimeComponent::TimeSeparator }
                 / ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
-                / ascii_space() { NFDatetimeComponent::Literal(' ') }
+                / lit_str:literal_string() { NFDatetimeComponent::Literal(lit_str) }
+                / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
 
         rule nf_text() -> NFText // Line 11
-            = f:(ascii_commercial_at()+) s:(nf_text_is_at()*) {
-                NFText { format: f.iter().map(|_| true).chain(s.iter().copied()).collect() }
-            }
-            / f:(nf_text_is_at()*) s:(ascii_commercial_at()+) {
-                NFText { format: f.iter().copied().chain(s.iter().map(|_| true)).collect() }
+            = elements:(nf_text_element())+ {
+                NFText { elements }
             }
 
-            rule nf_text_is_at() -> bool
-                = ascii_commercial_at() { true }
-                / intl_ampm() { false }
+            rule nf_text_element() -> TextFormatElement
+                = ascii_commercial_at() { TextFormatElement::AtPlaceholder }
+                / ampm_val:intl_ampm() { TextFormatElement::AmPm(ampm_val) }
+                / lcs:literal_char_space() { TextFormatElement::LiteralCharSpace(lcs) }
+                / ls:literal_string() { TextFormatElement::LiteralString(ls) }
+                / fc:literal_char_repeat() { TextFormatElement::FillChar(fc) }
+                / ec:literal_char() { TextFormatElement::EscapedChar(ec) }
 
         rule nf_fraction() -> NFFraction // Line 12
             = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
@@ -201,7 +221,7 @@ peg::parser! {
             }
 
         rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
-            = tks:nf_part_num_tk2_or_percent()+ {
+            = tks:nf_format_element()+ {
                 ?
                 if tks.first().is_some_and(|t| matches!(t, DigitPosOrOther::Other(_)))
                     && tks.last().is_some_and(|t| matches!(t, DigitPosOrOther::Other(_)))
@@ -212,9 +232,13 @@ peg::parser! {
                 }
             }
 
-            rule nf_part_num_tk2_or_percent() -> DigitPosOrOther<Percent> // Custom
+            rule nf_format_element() -> DigitPosOrOther<Percent>
                 = t:nf_part_num_token2() { DigitPosOrOther::Digit(t) }
                 / ascii_percent_sign() { DigitPosOrOther::Other(Percent {}) }
+                / lcs_char:literal_char_space() { DigitPosOrOther::LiteralCharSpace(lcs_char) }
+                / lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
+                / fill_char:literal_char_repeat() { DigitPosOrOther::FillChar(fill_char) }
+                / esc_char:literal_char() { DigitPosOrOther::EscapedChar(esc_char) }
 
         rule nf_part_exponential() -> Sign // Line 14
             = ascii_capital_letter_e() sgn:nf_part_sign() { sgn }
@@ -222,6 +246,20 @@ peg::parser! {
         rule nf_part_year() -> YearFormat // Line 15
             = "yyyy" { YearFormat::FourDigit }
             / "yy" { YearFormat::TwoDigit }
+
+        rule nf_part_era_g() -> EraFormatG // Custom
+            = "g" { EraFormatG::OneDigit }
+            / "gg" { EraFormatG::TwoDigit }
+            / "ggg" { EraFormatG::ThreeDigit }
+
+        rule nf_part_era_year() -> EraYearFormat // Custom
+            = "e" { EraYearFormat::Short }
+            / "ee" { EraYearFormat::Long }
+
+        rule nf_part_calendar_b() -> CalendarTypeB // Custom
+            = "b1" { CalendarTypeB::Gregorian }
+            / "b2" { CalendarTypeB::Hijri }
+            / expected!("calendar type (b1 or b2)")
 
         rule nf_part_month() -> MonthFormat // Line 16
             = m:(ascii_small_letter_m()*<1,5>) {
@@ -283,17 +321,24 @@ peg::parser! {
             / ascii_less_than_sign() { NFCondOperator::LessThan }
 
         rule nf_part_locale_id() -> PartLocaleID // Line 27
-            = ascii_left_square_bracket() ascii_dollar_sign() name:utf16_any()+ suffix:nf_part_locale_id_suffix()? ascii_right_square_bracket() {
-                PartLocaleID {
-                    name: name.iter().collect(),
-                    suffix,
+            = quiet!{
+                ascii_left_square_bracket()
+                ascii_dollar_sign()
+                name_chars:currency_symbol_char()*
+                hex_digits_opt:(ascii_hyphen_minus() v:nf_part_locale_id_hex_value() {v})?
+                ascii_right_square_bracket()
+                {
+                    PartLocaleID::from_parsed_peg(name_chars, hex_digits_opt)
                 }
             }
+            / expected!("locale/currency format (e.g., [$-409] or [$USD-409])")
 
-            rule nf_part_locale_id_suffix() -> Vec<u8>
-                = ascii_hyphen_minus() val:ascii_digit_hexadecimal()*<3,8> {
-                    val.into_iter().collect()
-                }
+            rule currency_symbol_char() -> char
+                = !(['-'] / [']']) c:utf16_any() { c }
+
+            rule nf_part_locale_id_hex_value() -> Vec<u8>
+                = val:ascii_digit_hexadecimal()*<3,8> { val }
+
 
         rule nf_part_cond_num() -> f64 // Line 28
             = neg:ascii_hyphen_minus()? int_p:nf_part_int_num() dec_p:nf_part_cond_num_dec()? exp:nf_part_cond_num_exp()? {
@@ -391,7 +436,7 @@ peg::parser! {
             = ascii_asterisk() c:utf16_any() { c }
 
         rule literal_string() -> String // Line 42
-            = ascii_quotation_mark() s:utf16_any_without_quote()+ ascii_quotation_mark() { s.iter().collect() }
+            = ascii_quotation_mark() s:utf16_any_without_quote()* ascii_quotation_mark() { s.iter().collect() }
             / s:literal_char()+ { s.iter().collect() }
 
         rule utf16_any_without_quote() -> char // Line 43
