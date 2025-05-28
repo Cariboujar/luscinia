@@ -201,8 +201,7 @@ peg::parser! {
                 / ls:literal_string() { TextFormatElement::LiteralString(ls) }
                 / fc:literal_char_repeat() { TextFormatElement::FillChar(fc) }
                 / ec:literal_char() { TextFormatElement::EscapedChar(ec) }
-                // TODO: buggy.... UB
-                / bc:utf16_any_without_quote() { TextFormatElement::BareChar(bc) }
+                / bc:unmatched_literal_char() { TextFormatElement::BareChar(bc) }
 
         rule nf_fraction() -> NFFraction // Line 12
             = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
@@ -473,7 +472,6 @@ peg::parser! {
             = ascii_colon()
 
         rule intl_color() -> DefinedColor // Line 49
-            // TODO: benchmark, use "Black" or ascii_capital_letter_b() ...?
             = "Black" { DefinedColor::Black }
             / "Blue" { DefinedColor::Blue }
             / "Cyan" { DefinedColor::Cyan }
@@ -493,6 +491,12 @@ peg::parser! {
 
         rule utf16_any() -> char // Line 52
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
+
+        rule unmatched_literal_char() -> char
+            = !ascii_quotation_mark() !ascii_asterisk() !ascii_commercial_at() !ascii_reverse_solidus()
+              !ascii_low_line() !ascii_percent_sign() !ascii_full_stop() !ascii_comma()
+              !ascii_semicolon() !ascii_question_mark() !ascii_number_sign() !ascii_solidus()
+              !intl_ampm() !ascii_digit() c:utf16_any() { c }
 
         rule ascii_space() -> ()
             = [' '] { }
