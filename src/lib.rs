@@ -227,12 +227,7 @@ pub enum SecondFormat {
 pub struct AbsSecondFormat(pub u8);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum SubSecondFormat {
-    OneChar,
-    TwoChar,
-    ThreeChar,
-}
+pub struct SubSecondFormat(pub u8);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -519,9 +514,10 @@ peg::parser! {
             }
 
         rule nf_part_sub_second() -> SubSecondFormat // Line 24
-            = "sss" { SubSecondFormat::ThreeChar }
-            / "ss" { SubSecondFormat::TwoChar }
-            / "s" { SubSecondFormat::OneChar }
+            = intl_char_decimal_sep() z:(ascii_digit_zero()*<1,3>) {?
+                Ok(SubSecondFormat(z.len() as u8))
+            }
+            / expected!("sub-second (.0, .00, or .000)")
 
         rule nf_part_cond() -> NFPartCondition // Line 25
             = ascii_left_square_bracket() op:nf_part_comp_oper() value:nf_part_cond_num() ascii_right_square_bracket() {
