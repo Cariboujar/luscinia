@@ -190,7 +190,7 @@ peg::parser! {
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
 
         rule nf_text() -> NFText // Line 11
-            = elements:(nf_text_element())+ {
+            = elements:(nf_text_element())+ !nf_text_element() {
                 NFText { elements }
             }
 
@@ -201,6 +201,8 @@ peg::parser! {
                 / ls:literal_string() { TextFormatElement::LiteralString(ls) }
                 / fc:literal_char_repeat() { TextFormatElement::FillChar(fc) }
                 / ec:literal_char() { TextFormatElement::EscapedChar(ec) }
+                // TODO: buggy.... UB
+                / bc:utf16_any_without_quote() { TextFormatElement::BareChar(bc) }
 
         rule nf_fraction() -> NFFraction // Line 12
             = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
@@ -373,8 +375,17 @@ peg::parser! {
             = ascii_left_square_bracket() c:intl_color() ascii_right_square_bracket() {
                 NFPartColor::Intl(c)
             }
-            / ascii_left_square_bracket() nf_part_str_color() id:nf_part_1to56() ascii_right_square_bracket() {
-                NFPartColor::Color(id)
+            // / ascii_left_square_bracket() nf_part_str_color() id:nf_part_1to56() ascii_right_square_bracket() {
+            //     NFPartColor::Color(id)
+            // }
+
+            // Use uint + string literal
+            / "[" nf_part_str_color() id:uint() "]" {
+                ? if id > 56 || id == 0 {
+                    Err("Color ID must be between 1 and 56")
+                } else {
+                    Ok(NFPartColor::Color(id as u8))
+                }
             }
 
         rule nf_part_1to56() -> u8 // Line 31
@@ -427,7 +438,10 @@ peg::parser! {
             / ascii_digit_nine() { 9 }
 
         rule nf_part_str_color() -> () // Line 39
-            = ascii_capital_letter_c() ascii_small_letter_o() ascii_small_letter_l() ascii_small_letter_o() ascii_small_letter_r() {}
+            // = ascii_capital_letter_c() ascii_small_letter_o() ascii_small_letter_l() ascii_small_letter_o() ascii_small_letter_r() { }
+            = "Color" { }
+            // zh_CN L10n
+            / "颜色" { }
 
         rule literal_char() -> char // Line 40
             = ascii_reverse_solidus() c:utf16_any() { c }
@@ -806,5 +820,15 @@ peg::parser! {
             / ascii_small_letter_e() { 14 }
             / ascii_capital_letter_f() { 15 }
             / ascii_small_letter_f() { 15 }
+
+        // Custom Part
+
+        rule uint() -> u128
+            = digits:ascii_digit()+ {
+                digits.iter().fold(
+                    0u128,
+                    |acc, &d| acc * 10 + d as u128
+                )
+            }
     }
 }
