@@ -96,12 +96,12 @@ pub struct NFNumber {
     pub has_percent: bool,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NFFraction {
     pub numerator: Vec<NumPlaceholder>,
     pub denominator: Vec<NumPlaceholder>,
     pub integer_part: Option<Vec<DigitPosOrOther<Percent>>>,
-    pub has_percent: bool,
+    pub ampm_part: Vec<AmPm>,
 }
 
 /// true => @
@@ -321,9 +321,8 @@ peg::parser! {
                 / f:nf_general() { TextOr::Other(f) }
 
             rule num_or_frac_or_dt() -> NumberOrFracOrDt // Custom
-                = n:nf_number() { NumberOrFracOrDt::Number(n) }
-                // TODO: Fraction
-                // / f:nf_fraction() { NumberOrFracOrDt::Fraction(f) }
+                = quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
+                / n:nf_number() { NumberOrFracOrDt::Number(n) }
                 / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
@@ -444,12 +443,20 @@ peg::parser! {
                 / intl_ampm() { false }
 
         rule nf_fraction() -> NFFraction // Line 12
-            = num:nf_part_fraction() ascii_solidus() denom:nf_part_fraction() int:nf_part_num()? percent:ascii_percent_sign()? {
+            = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
                 NFFraction {
+                    integer_part: Some(int_part),
                     numerator: num,
                     denominator: denom,
-                    integer_part: int,
-                    has_percent: percent.is_some()
+                    ampm_part: ampm,
+                }
+            }
+            / num:nf_part_fraction() ascii_solidus() denom:nf_part_fraction() ampm:intl_ampm()* {
+                NFFraction {
+                    integer_part: None,
+                    numerator: num,
+                    denominator: denom,
+                    ampm_part: ampm,
                 }
             }
 
