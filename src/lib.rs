@@ -99,10 +99,16 @@ pub struct NFNumber {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NFFraction {
-    pub numerator: Vec<NumPlaceholder>,
-    pub denominator: Vec<NumPlaceholder>,
+    pub numerator: Vec<FracToken>,
+    pub denominator: Vec<FracToken>,
     pub integer_part: Option<Vec<DigitPosOrOther<Percent>>>,
     pub ampm_part: Vec<AmPm>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FracToken {
+    Placeholder(NumPlaceholder),
+    Percent,
 }
 
 /// true => @
@@ -613,23 +619,18 @@ peg::parser! {
             / intl_char_decimal_sep() { DigitPos::Separator(NumSeparator::Decimal) }
             / intl_char_numgrp_sep() { DigitPos::Separator(NumSeparator::NumberGroup) }
 
-        rule nf_part_fraction() -> Vec<NumPlaceholder> // Line 35
-            = ints:nf_part_int_num()+ percents:ascii_percent_sign()* {
-                ints.into_iter().map(|_| NumPlaceholder::Zero).collect()
+        rule nf_part_fraction() -> Vec<FracToken> // Line 35
+            = tokens:(
+                (t:nf_part_num_token1() { FracToken::Placeholder(t) })
+                / (ascii_percent_sign() { FracToken::Percent })
+                )+ {?
+                if tokens.iter().all(|t| matches!(t, FracToken::Percent)) {
+                    Err("Fraction part must contain at least one #, ?, or 0")
+                } else {
+                    Ok(tokens)
+                }
             }
-            / percents:ascii_percent_sign()* ints:nf_part_int_num()+ {
-                ints.into_iter().map(|_| NumPlaceholder::Zero).collect()
-            }
-            / tokens:nf_part_num_token1()+ percents:ascii_percent_sign()* {
-                tokens
-            }
-            / percents:ascii_percent_sign()* tokens:nf_part_num_token1()+ {
-                tokens
-            }
-
-            rule nf_part_fraction_num_or_percent() -> Option<Vec<u8>> // Some for num, None for %
-                = n:nf_part_int_num() { Some(n) }
-                / ascii_percent_sign() { None }
+            / expected!("fraction part (#, ?, 0, %)")
 
         rule nf_part_number_1to4() -> u8 // Line 36
             = ascii_digit_one() { 1 }
