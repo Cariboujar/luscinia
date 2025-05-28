@@ -390,20 +390,17 @@ peg::parser! {
             = intl_numfmt_general() { NFGeneral {} }
 
         rule nf_number() -> NFNumber // Line 7
-            = part:nf_part_num() percent:ascii_percent_sign()? {
-                NFNumber {
-                    num_part: part,
-                    exp_part: None,
-                    has_percent: percent.is_some()
-                }
-            }
-            / part1:nf_part_num() exp:(ascii_capital_letter_e() sgn:nf_part_sign() part2:nf_part_num() { (sgn, part2) })? percent:ascii_percent_sign()? {
+            = part1:nf_part_num() exp:(scientific_notation())? percent:ascii_percent_sign()? {
                 NFNumber {
                     num_part: part1,
                     exp_part: exp,
                     has_percent: percent.is_some()
                 }
             }
+
+            rule scientific_notation() -> (Sign, Vec<DigitPosOrOther<Percent>>)
+                = quiet!{e:ascii_capital_letter_e() sgn:(ascii_plus_sign() { Sign::Plus } / ascii_hyphen_minus() { Sign::Minus }) part2:nf_part_num() { (sgn, part2) }}
+                / expected!("scientific notation (E+n or E-n)")
 
         rule nf_datatime_token() -> NFDateTimeToken // Line 8
             = y:nf_part_year() { NFDateTimeToken::Year(y) }
