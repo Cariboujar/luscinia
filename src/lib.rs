@@ -59,6 +59,7 @@ pub enum NFDatetimeComponent {
     DateSeparator,
     TimeSeparator,
     AMPM(AmPm),
+    Literal(char),
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -429,6 +430,7 @@ peg::parser! {
                 / intl_char_date_sep() { NFDatetimeComponent::DateSeparator }
                 / intl_char_time_sep() { NFDatetimeComponent::TimeSeparator }
                 / ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
+                / ascii_space() { NFDatetimeComponent::Literal(' ') }
 
         rule nf_text() -> NFText // Line 11
             = f:(ascii_commercial_at()+) s:(nf_text_is_at()*) {
@@ -673,6 +675,7 @@ peg::parser! {
 
         rule intl_char_date_sep() -> () // Line 47
             = ascii_solidus()
+            / ascii_hyphen_minus()
 
         rule intl_char_time_sep() -> () // Line 48
             = ascii_colon()
@@ -692,8 +695,9 @@ peg::parser! {
             = "General" { }
 
         rule intl_ampm() -> AmPm // Line 51
-            = ascii_capital_letter_p() ascii_capital_letter_m() ascii_solidus() ascii_capital_letter_a() ascii_capital_letter_m() { AmPm::Full }
+            = "AM/PM" { AmPm::Full }
             / "A/P" { AmPm::Simple }
+            / expected!("AM/PM or A/P")
 
         rule utf16_any() -> char // Line 52
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
