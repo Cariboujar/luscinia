@@ -4,7 +4,7 @@ pub mod types;
 
 pub use builtin::{builtin_format, builtin_formats};
 pub use parser::{NumfmtParser, PResult};
-pub use types::*;
+pub use types::NumFormat;
 
 #[cfg(test)]
 mod tests {

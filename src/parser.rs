@@ -253,8 +253,8 @@ peg::parser! {
             / "ggg" { EraFormatG::ThreeDigit }
 
         rule nf_part_era_year() -> EraYearFormat // Custom
-            = "e" { EraYearFormat::Short }
-            / "ee" { EraYearFormat::Long }
+            = "e" { EraYearFormat::OneDigit }
+            / "ee" { EraYearFormat::TwoDigit }
 
         rule nf_part_calendar_b() -> CalendarTypeB // Custom
             = "b1" { CalendarTypeB::Gregorian }
