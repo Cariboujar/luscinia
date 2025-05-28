@@ -696,295 +696,295 @@ peg::parser! {
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
 
         rule ascii_space() -> ()
-            = ['\x20'] { }
+            = [' '] { }
 
         rule ascii_exclamation_mark() -> ()
-            = ['\x21'] { }
+            = ['!'] { }
 
         rule ascii_quotation_mark() -> ()
-            = ['\x22'] { }
+            = ['"'] { }
 
         rule ascii_number_sign() -> ()
-            = ['\x23'] { }
+            = ['#'] { }
 
         rule ascii_dollar_sign() -> ()
-            = ['\x24'] { }
+            = ['$'] { }
 
         rule ascii_percent_sign() -> ()
-            = ['\x25'] { }
+            = ['%'] { }
 
         rule ascii_ampersand() -> ()
-            = ['\x26'] { }
+            = ['&'] { }
 
         rule ascii_apostrophe() -> ()
-            = ['\x27'] { }
+            = ['\''] { }
 
         rule ascii_left_parenthesis() -> ()
-            = ['\x28'] { }
+            = ['('] { }
 
         rule ascii_right_parenthesis() -> ()
-            = ['\x29'] { }
+            = [')'] { }
 
         rule ascii_asterisk() -> ()
-            = ['\x2A'] { }
+            = ['*'] { }
 
         rule ascii_plus_sign() -> ()
-            = ['\x2B'] { }
+            = ['+'] { }
 
         rule ascii_comma() -> ()
-            = ['\x2C'] { }
+            = [','] { }
 
         rule ascii_hyphen_minus() -> ()
-            = ['\x2D'] { }
+            = ['-'] { }
 
         rule ascii_full_stop() -> ()
-            = ['\x2E'] { }
+            = ['.'] { }
 
         rule ascii_solidus() -> ()
-            = ['\x2F'] { }
+            = ['/'] { }
 
         rule ascii_digit_zero() -> ()
-            = ['\x30'] { }
+            = ['0'] { }
 
         rule ascii_digit_one() -> ()
-            = ['\x31'] { }
+            = ['1'] { }
 
         rule ascii_digit_two() -> ()
-            = ['\x32'] { }
+            = ['2'] { }
 
         rule ascii_digit_three() -> ()
-            = ['\x33'] { }
+            = ['3'] { }
 
         rule ascii_digit_four() -> ()
-            = ['\x34'] { }
+            = ['4'] { }
 
         rule ascii_digit_five() -> ()
-            = ['\x35'] { }
+            = ['5'] { }
 
         rule ascii_digit_six() -> ()
-            = ['\x36'] { }
+            = ['6'] { }
 
         rule ascii_digit_seven() -> ()
-            = ['\x37'] { }
+            = ['7'] { }
 
         rule ascii_digit_eight() -> ()
-            = ['\x38'] { }
+            = ['8'] { }
 
         rule ascii_digit_nine() -> ()
-            = ['\x39'] { }
+            = ['9'] { }
 
         rule ascii_colon() -> ()
-            = ['\x3A'] { }
+            = [':'] { }
 
         rule ascii_semicolon() -> ()
-            = ['\x3B'] { }
+            = [';'] { }
 
         rule ascii_less_than_sign() -> ()
-            = ['\x3C'] { }
+            = ['<'] { }
 
         rule ascii_equals_sign() -> ()
-            = ['\x3D'] { }
+            = ['='] { }
 
         rule ascii_greater_than_sign() -> ()
-            = ['\x3E'] { }
+            = ['>'] { }
 
         rule ascii_question_mark() -> ()
-            = ['\x3F'] { }
+            = ['?'] { }
 
         rule ascii_commercial_at() -> ()
-            = ['\x40'] { }
+            = ['@'] { }
 
         rule ascii_capital_letter_a() -> ()
-            = ['\x41'] { }
+            = ['A'] { }
 
         rule ascii_capital_letter_b() -> ()
-            = ['\x42'] { }
+            = ['B'] { }
 
         rule ascii_capital_letter_c() -> ()
-            = ['\x43'] { }
+            = ['C'] { }
 
         rule ascii_capital_letter_d() -> ()
-            = ['\x44'] { }
+            = ['D'] { }
 
         rule ascii_capital_letter_e() -> ()
-            = ['\x45'] { }
+            = ['E'] { }
 
         rule ascii_capital_letter_f() -> ()
-            = ['\x46'] { }
+            = ['F'] { }
 
         rule ascii_capital_letter_g() -> ()
-            = ['\x47'] { }
+            = ['G'] { }
 
         rule ascii_capital_letter_h() -> ()
-            = ['\x48'] { }
+            = ['H'] { }
 
         rule ascii_capital_letter_i() -> ()
-            = ['\x49'] { }
+            = ['I'] { }
 
         rule ascii_capital_letter_j() -> ()
-            = ['\x4A'] { }
+            = ['J'] { }
 
         rule ascii_capital_letter_k() -> ()
-            = ['\x4B'] { }
+            = ['K'] { }
 
         rule ascii_capital_letter_l() -> ()
-            = ['\x4C'] { }
+            = ['L'] { }
 
         rule ascii_capital_letter_m() -> ()
-            = ['\x4D'] { }
+            = ['M'] { }
 
         rule ascii_capital_letter_n() -> ()
-            = ['\x4E'] { }
+            = ['N'] { }
 
         rule ascii_capital_letter_o() -> ()
-            = ['\x4F'] { }
+            = ['O'] { }
 
         rule ascii_capital_letter_p() -> ()
-            = ['\x50'] { }
+            = ['P'] { }
 
         rule ascii_capital_letter_q() -> ()
-            = ['\x51'] { }
+            = ['Q'] { }
 
         rule ascii_capital_letter_r() -> ()
-            = ['\x52'] { }
+            = ['R'] { }
 
         rule ascii_capital_letter_s() -> ()
-            = ['\x53'] { }
+            = ['S'] { }
 
         rule ascii_capital_letter_t() -> ()
-            = ['\x54'] { }
+            = ['T'] { }
 
         rule ascii_capital_letter_u() -> ()
-            = ['\x55'] { }
+            = ['U'] { }
 
         rule ascii_capital_letter_v() -> ()
-            = ['\x56'] { }
+            = ['V'] { }
 
         rule ascii_capital_letter_w() -> ()
-            = ['\x57'] { }
+            = ['W'] { }
 
         rule ascii_capital_letter_x() -> ()
-            = ['\x58'] { }
+            = ['X'] { }
 
         rule ascii_capital_letter_y() -> ()
-            = ['\x59'] { }
+            = ['Y'] { }
 
         rule ascii_capital_letter_z() -> ()
-            = ['\x5A'] { }
+            = ['Z'] { }
 
         rule ascii_left_square_bracket() -> ()
-            = ['\x5B'] { }
+            = ['['] { }
 
         rule ascii_reverse_solidus() -> ()
-            = ['\x5C'] { }
+            = ['\\'] { }
 
         rule ascii_right_square_bracket() -> ()
-            = ['\x5D'] { }
+            = [']'] { }
 
         rule ascii_circumflex_accent() -> ()
-            = ['\x5E'] { }
+            = ['^'] { }
 
         rule ascii_low_line() -> ()
-            = ['\x5F'] { }
+            = ['_'] { }
 
         rule ascii_grave_accent() -> ()
-            = ['\x60'] { }
+            = ['`'] { }
 
         rule ascii_small_letter_a() -> ()
-            = ['\x61'] { }
+            = ['a'] { }
 
         rule ascii_small_letter_b() -> ()
-            = ['\x62'] { }
+            = ['b'] { }
 
         rule ascii_small_letter_c() -> ()
-            = ['\x63'] { }
+            = ['c'] { }
 
         rule ascii_small_letter_d() -> ()
-            = ['\x64'] { }
+            = ['d'] { }
 
         rule ascii_small_letter_e() -> ()
-            = ['\x65'] { }
+            = ['e'] { }
 
         rule ascii_small_letter_f() -> ()
-            = ['\x66'] { }
+            = ['f'] { }
 
         rule ascii_small_letter_g() -> ()
-            = ['\x67'] { }
+            = ['g'] { }
 
         rule ascii_small_letter_h() -> ()
-            = ['\x68'] { }
+            = ['h'] { }
 
         rule ascii_small_letter_i() -> ()
-            = ['\x69'] { }
+            = ['i'] { }
 
         rule ascii_small_letter_j() -> ()
-            = ['\x6A'] { }
+            = ['j'] { }
 
         rule ascii_small_letter_k() -> ()
-            = ['\x6B'] { }
+            = ['k'] { }
 
         rule ascii_small_letter_l() -> ()
-            = ['\x6C'] { }
+            = ['l'] { }
 
         rule ascii_small_letter_m() -> ()
-            = ['\x6D'] { }
+            = ['m'] { }
 
         rule ascii_small_letter_n() -> ()
-            = ['\x6E'] { }
+            = ['n'] { }
 
         rule ascii_small_letter_o() -> ()
-            = ['\x6F'] { }
+            = ['o'] { }
 
         rule ascii_small_letter_p() -> ()
-            = ['\x70'] { }
+            = ['p'] { }
 
         rule ascii_small_letter_q() -> ()
-            = ['\x71'] { }
+            = ['q'] { }
 
         rule ascii_small_letter_r() -> ()
-            = ['\x72'] { }
+            = ['r'] { }
 
         rule ascii_small_letter_s() -> ()
-            = ['\x73'] { }
+            = ['s'] { }
 
         rule ascii_small_letter_t() -> ()
-            = ['\x74'] { }
+            = ['t'] { }
 
         rule ascii_small_letter_u() -> ()
-            = ['\x75'] { }
+            = ['u'] { }
 
         rule ascii_small_letter_v() -> ()
-            = ['\x76'] { }
+            = ['v'] { }
 
         rule ascii_small_letter_w() -> ()
-            = ['\x77'] { }
+            = ['w'] { }
 
         rule ascii_small_letter_x() -> ()
-            = ['\x78'] { }
+            = ['x'] { }
 
         rule ascii_small_letter_y() -> ()
-            = ['\x79'] { }
+            = ['y'] { }
 
         rule ascii_small_letter_z() -> ()
-            = ['\x7A'] { }
+            = ['z'] { }
 
         rule ascii_left_curly_bracket() -> ()
-            = ['\x7B'] { }
+            = ['{'] { }
 
         rule ascii_vertical_line() -> ()
-            = ['\x7C'] { }
+            = ['|'] { }
 
         rule ascii_right_curly_bracket() -> ()
-            = ['\x7D'] { }
+            = ['}'] { }
 
         rule ascii_tilde() -> ()
-            = ['\x7E'] { }
+            = ['~'] { }
 
         rule ascii_delete() -> ()
             = ['\x7F'] { }
 
         rule ascii_crlf() -> ()
-            = ['\x0D' | '\x0A'] { }
+            = ['\r' | '\n'] { }
 
         rule ascii_digit() -> u8
             = ascii_digit_zero() { 0 }
