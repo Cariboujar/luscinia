@@ -47,9 +47,10 @@ pub struct DatetimeTuple(
     pub Option<NFDatetime>,
 );
 
-/// TODO
 #[derive(Debug, PartialEq, Eq)]
-pub struct NFDatetime {}
+pub struct NFDatetime {
+    pub components: Vec<NFDatetimeComponent>,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NFDatetimeComponent {
@@ -85,17 +86,23 @@ pub enum NumberOrFracOrDt {
     Datetime(DatetimeTuple),
 }
 
-/// TODO
 #[derive(Debug, PartialEq, Eq)]
 pub struct NFGeneral {}
 
-/// TODO
 #[derive(Debug, PartialEq, Eq)]
-pub struct NFNumber {}
+pub struct NFNumber {
+    pub num_part: Vec<DigitPosOrOther<Percent>>,
+    pub exp_part: Option<(Sign, Vec<DigitPosOrOther<Percent>>)>,
+    pub has_percent: bool,
+}
 
-/// TODO
 #[derive(Debug, PartialEq, Eq)]
-pub struct NFFraction {}
+pub struct NFFraction {
+    pub numerator: Vec<NumPlaceholder>,
+    pub denominator: Vec<NumPlaceholder>,
+    pub integer_part: Option<Vec<DigitPosOrOther<Percent>>>,
+    pub has_percent: bool,
+}
 
 /// true => @
 /// false => INTL-AMPM
@@ -383,7 +390,20 @@ peg::parser! {
             = intl_numfmt_general() { NFGeneral {} }
 
         rule nf_number() -> NFNumber // Line 7
-            = nf_part_num() { NFNumber {} } // TODO: Line 13, behavior & validation
+            = part:nf_part_num() percent:ascii_percent_sign()? {
+                NFNumber {
+                    num_part: part,
+                    exp_part: None,
+                    has_percent: percent.is_some()
+                }
+            }
+            / part1:nf_part_num() exp:(ascii_capital_letter_e() sgn:nf_part_sign() part2:nf_part_num() { (sgn, part2) })? percent:ascii_percent_sign()? {
+                NFNumber {
+                    num_part: part1,
+                    exp_part: exp,
+                    has_percent: percent.is_some()
+                }
+            }
 
         rule nf_datatime_token() -> NFDateTimeToken // Line 8
             = y:nf_part_year() { NFDateTimeToken::Year(y) }
@@ -401,7 +421,15 @@ peg::parser! {
 
         rule nf_datetime() -> NFDatetime // Line 10
             = ampms:intl_ampm()* dt_tokens:nf_datatime_token()+ components:nf_datetime_component()* {
-                NFDatetime {} // TODO: implement
+                let all_components = dt_tokens.into_iter()
+                    .map(NFDatetimeComponent::Token)
+                    .chain(components)
+                    .chain(ampms.into_iter().map(|a| NFDatetimeComponent::AMPM(a)))
+                    .collect();
+
+                NFDatetime {
+                    components: all_components
+                }
             }
 
             rule nf_datetime_component() -> NFDatetimeComponent // Custom
@@ -423,8 +451,15 @@ peg::parser! {
                 = ascii_commercial_at() { true }
                 / intl_ampm() { false }
 
-        rule nf_fraction() -> () // Line 12
-            = {} // TODO
+        rule nf_fraction() -> NFFraction // Line 12
+            = num:nf_part_fraction() ascii_solidus() denom:nf_part_fraction() int:nf_part_num()? percent:ascii_percent_sign()? {
+                NFFraction {
+                    numerator: num,
+                    denominator: denom,
+                    integer_part: int,
+                    has_percent: percent.is_some()
+                }
+            }
 
         rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
             = tks:nf_part_num_tk2_or_percent()+ {
@@ -576,10 +611,19 @@ peg::parser! {
             / intl_char_decimal_sep() { DigitPos::Separator(NumSeparator::Decimal) }
             / intl_char_numgrp_sep() { DigitPos::Separator(NumSeparator::NumberGroup) }
 
-        rule nf_part_fraction() -> () // Line 35
-            // Guessing that only one percent sign is allowed
-            // = f:nf_part_int_num()+ s:nf_part_fraction_num_or_percent()*
-            = {} // TODO
+        rule nf_part_fraction() -> Vec<NumPlaceholder> // Line 35
+            = ints:nf_part_int_num()+ percents:ascii_percent_sign()* {
+                ints.into_iter().map(|_| NumPlaceholder::Zero).collect()
+            }
+            / percents:ascii_percent_sign()* ints:nf_part_int_num()+ {
+                ints.into_iter().map(|_| NumPlaceholder::Zero).collect()
+            }
+            / tokens:nf_part_num_token1()+ percents:ascii_percent_sign()* {
+                tokens
+            }
+            / percents:ascii_percent_sign()* tokens:nf_part_num_token1()+ {
+                tokens
+            }
 
             rule nf_part_fraction_num_or_percent() -> Option<Vec<u8>> // Some for num, None for %
                 = n:nf_part_int_num() { Some(n) }
