@@ -81,20 +81,20 @@ peg::parser! {
                 }
 
         rule nf_any() -> Any // Line 2
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
-                Any::Text(SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: text,
-                })
-            }
-            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
                 Any::Other(SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
                     color,
                     inner: AnyInner::ConditionalData(condition, data),
+                })
+            }
+            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
+                Any::Text(SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
+                    color,
+                    inner: text,
                 })
             }
 
@@ -109,20 +109,20 @@ peg::parser! {
             }
 
         rule nf_any_no_cond() -> AnyNoCond // Line 4
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
-                SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: TextOr::Text(text),
-                }
-            }
-            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
                 SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
                     color,
                     inner: TextOr::Other(data),
+                }
+            }
+            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
+                SectionWrapper {
+                    is_thai_prefixed: t_prefix.is_some(),
+                    locale,
+                    color,
+                    inner: TextOr::Text(text),
                 }
             }
 
