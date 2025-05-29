@@ -62,15 +62,18 @@ peg::parser! {
                 / f:nf_general() { TextOr::Other(f) }
 
             rule num_or_frac_or_dt() -> NumberOrFracOrDt // Custom
+                = p:nf_parenthesized_number() { NumberOrFracOrDt::ParenthesizedNumber(p) }
+                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
+                / n:nf_number() { NumberOrFracOrDt::Number(n) }
+                / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
+            
+            rule nf_parenthesized_number() -> NFNumber // Custom
                 = quiet!{
                     ascii_left_parenthesis()
                     inner_num:nf_number()
                     ascii_right_parenthesis()
-                    { NumberOrFracOrDt::ParenthesizedNumber(inner_num) }
+                    { inner_num }
                   }
-                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
-                / n:nf_number() { NumberOrFracOrDt::Number(n) }
-                / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
                 = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {
@@ -493,10 +496,9 @@ peg::parser! {
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
 
         rule unmatched_literal_char() -> char
-            = !ascii_quotation_mark() !ascii_asterisk() !ascii_commercial_at() !ascii_reverse_solidus()
-              !ascii_low_line() !ascii_percent_sign() !ascii_full_stop() !ascii_comma()
-              !ascii_semicolon() !ascii_question_mark() !ascii_number_sign() !ascii_solidus()
-              !intl_ampm() !ascii_digit() c:utf16_any() { c }
+            = !nf_general() !nf_number() !nf_datatime_token()
+            !nf_abs_time_token() !nf_fraction() !nf_parenthesized_number()
+            c:utf16_any() { c }
 
         rule ascii_space() -> ()
             = [' '] { }
