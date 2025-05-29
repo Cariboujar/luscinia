@@ -66,7 +66,7 @@ peg::parser! {
                 / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
                 / n:nf_number() { NumberOrFracOrDt::Number(n) }
                 / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
-            
+
             rule nf_parenthesized_number() -> NFNumber // Custom
                 = quiet!{
                     ascii_left_parenthesis()
@@ -496,7 +496,7 @@ peg::parser! {
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
 
         rule unmatched_literal_char() -> char
-            = !nf_general() !nf_number() !nf_datatime_token()
+            = !nf_general() !nf_number() !nf_datatime_token() !intl_ampm()
             !nf_abs_time_token() !nf_fraction() !nf_parenthesized_number()
             c:utf16_any() { c }
 

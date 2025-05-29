@@ -1,5 +1,5 @@
-use serde::Serialize;
 use crate::types::NFGeneral;
+use serde::Serialize;
 
 /// [NFDateTime] [NFGeneral] [NFDateTime]
 #[derive(Debug, Clone, PartialEq, Serialize)]

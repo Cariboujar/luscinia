@@ -16,14 +16,19 @@ mod tests {
 
     #[test]
     fn test_one() {
-        let res = parse_fmtstr("mm-dd-yy");
-        println!("{:?}", res);
+        let res = parse_fmtstr("#,##0.00_);[Red](#,##0.00)");
+        println!(
+            "{}",
+            serde_json::to_string_pretty(res.as_ref().unwrap()).unwrap()
+        );
         assert!(res.is_ok());
     }
 
     #[test]
     fn test_builtin_formats() {
-        let builtin_ids = [0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22];
+        let builtin_ids = [
+            0, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+        ];
         for &id in builtin_ids.iter() {
             let fmt: Option<&'static NumFormat> = builtin_format(id);
             assert!(fmt.is_some(), "Builtin format with ID {} not found", id);

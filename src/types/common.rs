@@ -1,5 +1,5 @@
-use std::fmt::Debug;
 use serde::Serialize;
+use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SectionWrapper<T> {
@@ -61,5 +61,5 @@ pub struct NFPartCondition {
 impl Eq for NFPartCondition {}
 
 // Forward references
-use crate::types::format_elements::NFText;
+use crate::types::elements::NFText;
 use crate::types::locale::PartLocaleID;
