@@ -1,8 +1,10 @@
 mod builtin;
+pub mod formatter;
 pub mod parser;
 pub mod types;
 
 pub use builtin::{builtin_format, builtin_formats};
+pub use formatter::{FormatError, FormatResult, FormatValue, LocaleConfig, format};
 pub use parser::{NumfmtParser, PResult};
 pub use types::NumFormat;
 
@@ -16,7 +18,7 @@ mod tests {
 
     #[test]
     fn test_one() {
-        let res = parse_fmtstr("#,##0.00_);[Red](#,##0.00)");
+        let res = parse_fmtstr("#,##0.00;(#,##0.00);\"Zero\"");
         println!(
             "{}",
             serde_json::to_string_pretty(res.as_ref().unwrap()).unwrap()
