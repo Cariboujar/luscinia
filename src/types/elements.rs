@@ -9,6 +9,7 @@ pub enum TextFormatElement {
     LiteralCharSpace(char),
     FillChar(char),
     EscapedChar(char),
+    BareChar(char),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]

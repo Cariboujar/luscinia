@@ -62,15 +62,18 @@ peg::parser! {
                 / f:nf_general() { TextOr::Other(f) }
 
             rule num_or_frac_or_dt() -> NumberOrFracOrDt // Custom
+                = p:nf_parenthesized_number() { NumberOrFracOrDt::ParenthesizedNumber(p) }
+                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
+                / n:nf_number() { NumberOrFracOrDt::Number(n) }
+                / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
+
+            rule nf_parenthesized_number() -> NFNumber // Custom
                 = quiet!{
                     ascii_left_parenthesis()
                     inner_num:nf_number()
                     ascii_right_parenthesis()
-                    { NumberOrFracOrDt::ParenthesizedNumber(inner_num) }
+                    { inner_num }
                   }
-                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
-                / n:nf_number() { NumberOrFracOrDt::Number(n) }
-                / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
                 = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {
@@ -190,7 +193,7 @@ peg::parser! {
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
 
         rule nf_text() -> NFText // Line 11
-            = elements:(nf_text_element())+ {
+            = elements:(nf_text_element())+ !nf_text_element() {
                 NFText { elements }
             }
 
@@ -201,6 +204,7 @@ peg::parser! {
                 / ls:literal_string() { TextFormatElement::LiteralString(ls) }
                 / fc:literal_char_repeat() { TextFormatElement::FillChar(fc) }
                 / ec:literal_char() { TextFormatElement::EscapedChar(ec) }
+                / bc:unmatched_literal_char() { TextFormatElement::BareChar(bc) }
 
         rule nf_fraction() -> NFFraction // Line 12
             = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
@@ -373,8 +377,17 @@ peg::parser! {
             = ascii_left_square_bracket() c:intl_color() ascii_right_square_bracket() {
                 NFPartColor::Intl(c)
             }
-            / ascii_left_square_bracket() nf_part_str_color() id:nf_part_1to56() ascii_right_square_bracket() {
-                NFPartColor::Color(id)
+            // / ascii_left_square_bracket() nf_part_str_color() id:nf_part_1to56() ascii_right_square_bracket() {
+            //     NFPartColor::Color(id)
+            // }
+
+            // Use uint + string literal
+            / "[" nf_part_str_color() id:uint() "]" {
+                ? if id > 56 || id == 0 {
+                    Err("Color ID must be between 1 and 56")
+                } else {
+                    Ok(NFPartColor::Color(id as u8))
+                }
             }
 
         rule nf_part_1to56() -> u8 // Line 31
@@ -427,7 +440,10 @@ peg::parser! {
             / ascii_digit_nine() { 9 }
 
         rule nf_part_str_color() -> () // Line 39
-            = ascii_capital_letter_c() ascii_small_letter_o() ascii_small_letter_l() ascii_small_letter_o() ascii_small_letter_r() {}
+            // = ascii_capital_letter_c() ascii_small_letter_o() ascii_small_letter_l() ascii_small_letter_o() ascii_small_letter_r() { }
+            = "Color" { }
+            // zh_CN L10n
+            / "颜色" { }
 
         rule literal_char() -> char // Line 40
             = ascii_reverse_solidus() c:utf16_any() { c }
@@ -459,7 +475,6 @@ peg::parser! {
             = ascii_colon()
 
         rule intl_color() -> DefinedColor // Line 49
-            // TODO: benchmark, use "Black" or ascii_capital_letter_b() ...?
             = "Black" { DefinedColor::Black }
             / "Blue" { DefinedColor::Blue }
             / "Cyan" { DefinedColor::Cyan }
@@ -479,6 +494,11 @@ peg::parser! {
 
         rule utf16_any() -> char // Line 52
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
+
+        rule unmatched_literal_char() -> char
+            = !nf_general() !nf_number() !nf_datatime_token() !intl_ampm()
+            !nf_abs_time_token() !nf_fraction() !nf_parenthesized_number()
+            c:utf16_any() { c }
 
         rule ascii_space() -> ()
             = [' '] { }
@@ -806,5 +826,15 @@ peg::parser! {
             / ascii_small_letter_e() { 14 }
             / ascii_capital_letter_f() { 15 }
             / ascii_small_letter_f() { 15 }
+
+        // Custom Part
+
+        rule uint() -> u128
+            = digits:ascii_digit()+ {
+                digits.iter().fold(
+                    0u128,
+                    |acc, &d| acc * 10 + d as u128
+                )
+            }
     }
 }
