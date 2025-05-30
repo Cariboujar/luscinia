@@ -18,8 +18,8 @@ pub struct NFDatetime {
 pub enum NFDatetimeComponent {
     Token(NFDateTimeToken),
     SubSecond(SubSecondFormat),
-    DateSeparator,
-    TimeSeparator,
+    DateSeparator(char),
+    TimeSeparator(char),
     AMPM(AmPm),
     Literal(String),
 }
@@ -68,6 +68,15 @@ pub enum CalendarTypeB {
 /// 1-5
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct MonthFormat(pub u8);
+
+impl MonthFormat {
+    pub(crate) fn from_minute_format(minute_format: MinuteFormat) -> Self {
+        match minute_format {
+            MinuteFormat::OneChar => MonthFormat(1),
+            MinuteFormat::TwoChar => MonthFormat(2),
+        }
+    }
+}
 
 /// 1-4
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
