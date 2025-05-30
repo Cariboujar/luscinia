@@ -145,13 +145,13 @@ pub fn format_string_with_parsed(
 
     match format {
         // Handle the standard case where text section is the 4th part of a format
-        NumFormat::FourParts(_, _, _, Some(NumberOrFracOrDtOrText::Text(text_section))) => {
+        NumFormat::FourParts(_, _, _, Some(FormatComponent::Text(text_section))) => {
             apply_bare_text_formatting(value, text_section.clone(), &locale)
         }
         NumFormat::FourParts(_, _, _, Some(_)) => Ok(value.to_string()),
 
         NumFormat::AnyNoCond(section) => match &section.inner {
-            NumberOrFracOrDtOrText::Text(text_section) => {
+            FormatComponent::Text(text_section) => {
                 apply_bare_text_formatting(value, text_section.clone(), &locale)
             }
             _ => Ok(value.to_string()),
@@ -183,10 +183,10 @@ fn format_conditional_general(
 /// Format a value with an unconditional format
 fn format_any_no_cond(
     value: f64,
-    section: &SectionWrapper<NumberOrFracOrDtOrText>,
+    section: &SectionWrapper<FormatComponent>,
     locale: &LocaleConfig,
 ) -> FormatResult {
-    let formatted = format_number_or_frac_or_dt_or_text(value, &section.inner, locale)?;
+    let formatted = format_component(value, &section.inner, locale)?;
     apply_section_decorations(&formatted, section, locale)
 }
 
@@ -196,7 +196,7 @@ fn format_any_no_text(
     section: &SectionWrapper<AnyInner>,
     locale: &LocaleConfig,
 ) -> FormatResult {
-    let AnyInner::ConditionalData(condition, number_or_frac_or_dt_or_text) = &section.inner;
+    let AnyInner::ConditionalData(condition, component) = &section.inner;
     // Check if condition is met
     if let Some(cond) = condition {
         if !evaluate_condition(value, cond) {
@@ -206,7 +206,7 @@ fn format_any_no_text(
     }
 
     let formatted =
-        format_number_or_frac_or_dt_or_text(value, number_or_frac_or_dt_or_text, locale)?;
+        format_component(value, component, locale)?;
     apply_section_decorations(&formatted, section, locale)
 }
 
@@ -216,17 +216,17 @@ fn format_any(value: f64, section: &Any, locale: &LocaleConfig) -> FormatResult 
 }
 
 /// Format a number/fraction/datetime value
-fn format_number_or_frac_or_dt_or_text(
+fn format_component(
     value: f64,
-    format: &NumberOrFracOrDtOrText,
+    format: &FormatComponent,
     locale: &LocaleConfig,
 ) -> FormatResult {
     match format {
-        NumberOrFracOrDtOrText::General() => Ok(format!("{}", value)),
-        NumberOrFracOrDtOrText::Number(number) => format_nf_number(value, number, locale),
-        NumberOrFracOrDtOrText::Fraction(fraction) => format_fraction(value, fraction, locale),
-        NumberOrFracOrDtOrText::Datetime(datetime) => format_datetime(value, datetime, locale),
-        NumberOrFracOrDtOrText::Text(text) => format_text(&value.to_string(), text, locale),
+        FormatComponent::General() => Ok(format!("{}", value)),
+        FormatComponent::Number(number) => format_nf_number(value, number, locale),
+        FormatComponent::Fraction(fraction) => format_fraction(value, fraction, locale),
+        FormatComponent::Datetime(datetime) => format_datetime(value, datetime, locale),
+        FormatComponent::Text(text) => format_text(&value.to_string(), text, locale),
     }
 }
 

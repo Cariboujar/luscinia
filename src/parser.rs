@@ -71,15 +71,16 @@ peg::parser! {
                 })
             }
 
-            rule all_f4() -> NumberOrFracOrDtOrText // Custom
-                = t:nf_text() { NumberOrFracOrDtOrText::Text(t) }
-                / f:nf_general() { NumberOrFracOrDtOrText::General() }
+            rule all_f4() -> FormatComponent // Custom
+                = t:nf_text() { FormatComponent::Text(t) }
+                / f:nf_general() { FormatComponent::General() }
 
-            rule num_or_frac_or_dt_or_text() -> NumberOrFracOrDtOrText // Custom
-                = f:nf_fraction() { NumberOrFracOrDtOrText::Fraction(f) }
-                / n:nf_number() { NumberOrFracOrDtOrText::Number(n) }
-                / dt:datetime_tuple() { NumberOrFracOrDtOrText::Datetime(dt) }
-                / t:nf_text() { NumberOrFracOrDtOrText::Text(t) }
+            rule format_component() -> FormatComponent // Custom
+                = f:nf_fraction() { FormatComponent::Fraction(f) }
+                / n:nf_number() { FormatComponent::Number(n) }
+                / dt:datetime_tuple() { FormatComponent::Datetime(dt) }
+                / t:nf_text() { FormatComponent::Text(t) }
+                / g:nf_general() { FormatComponent::General() }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
                 = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {?
@@ -90,7 +91,7 @@ peg::parser! {
                 }
 
         rule nf_any() -> SectionWrapper<AnyInner> // Line 2
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt_or_text() {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:format_component() {
                 SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
@@ -100,7 +101,7 @@ peg::parser! {
             }
 
         // rule nf_any_no_text() -> AnyNoText // Line 3
-        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt_or_text() {
+        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:format_component() {
         //         SectionWrapper {
         //             is_thai_prefixed: t_prefix.is_some(),
         //             locale,
@@ -110,7 +111,7 @@ peg::parser! {
         //     }
 
         rule nf_any_no_cond() -> AnyNoCond // Line 4
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt_or_text() {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:format_component() {
                 SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
@@ -123,12 +124,12 @@ peg::parser! {
                     is_thai_prefixed: false,
                     locale: None,
                     color: None,
-                    inner: NumberOrFracOrDtOrText::General(),
+                    inner: FormatComponent::General(),
                 }
             }
 
         // rule nf_any_no_text_no_cond() -> AnyNoTextNoCond // Line 5
-        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt_or_text() {
+        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:format_component() {
         //         SectionWrapper {
         //             is_thai_prefixed: t_prefix.is_some(),
         //             locale,
