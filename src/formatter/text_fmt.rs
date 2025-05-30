@@ -6,16 +6,14 @@ use crate::types::elements::*;
 use crate::types::{AmPm, NFText};
 
 /// Format text according to NFText format specification
-pub fn format_text(value: &str, format: &NFText, locale: &LocaleConfig) -> FormatResult {
+pub fn format_text(value: &str, format: &NFText, _locale: &LocaleConfig) -> FormatResult {
     let mut result = String::new();
-    let mut at_replaced = false;
 
     for element in &format.elements {
         match element {
             TextFormatElement::AtPlaceholder => {
                 // @ is the placeholder for the text value
                 result.push_str(value);
-                at_replaced = true;
             }
             TextFormatElement::AmPm(ampm) => {
                 // In text format, AM/PM usually doesn't make sense but we can handle it
@@ -30,7 +28,11 @@ pub fn format_text(value: &str, format: &NFText, locale: &LocaleConfig) -> Forma
                 result.push_str(s);
             }
             TextFormatElement::FillChar(c) => {
-                result.push(*c);
+                // repeat the character 5 times, should be able to configure the number of times
+                const COUNT: usize = 5;
+                for _ in 0..COUNT {
+                    result.push(*c);
+                }
             }
             TextFormatElement::EscapedChar(c) => {
                 result.push(*c);
@@ -39,16 +41,6 @@ pub fn format_text(value: &str, format: &NFText, locale: &LocaleConfig) -> Forma
                 result.push(*c);
             }
         }
-    }
-
-    // If there was no @ placeholder in the format, append the text at the end
-    if !at_replaced
-        && format
-            .elements
-            .iter()
-            .any(|e| matches!(e, TextFormatElement::AtPlaceholder))
-    {
-        result.push_str(value);
     }
 
     Ok(result)
