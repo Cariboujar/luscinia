@@ -273,14 +273,12 @@ mod tests {
 
     #[test]
     fn test_fraction_formats() {
-        // TODO: LLM Generated, haven't been reviewed.
-        // Fraction formats
         assert_eq!(test_format(1.25, "# ?/?").unwrap(), "1 1/4");
         assert_eq!(test_format(1.33333, "# ?/3").unwrap(), "1 1/3");
         assert_eq!(test_format(1.66667, "# ?/3").unwrap(), "1 2/3");
-        assert_eq!(test_format(0.125, "# ?/8").unwrap(), "1/8");
+        assert_eq!(test_format(0.125, "# ?/8").unwrap(), " 1/8");
         assert_eq!(test_format(2.5, "# ?/2").unwrap(), "2 1/2");
-        assert_eq!(test_format(0.075, "??/???").unwrap(), "3/40");
+        assert_eq!(test_format(0.075, "??/???").unwrap(), " 3/40 ");
     }
 
     #[test]
