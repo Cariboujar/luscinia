@@ -59,4 +59,6 @@ pub struct Percent;
 pub enum FracToken {
     Placeholder(NumPlaceholder),
     Percent,
+    Digit(u8),
+    Number(u32),
 }

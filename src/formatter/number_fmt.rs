@@ -91,17 +91,24 @@ pub fn format_fraction(value: f64, format: &NFFraction, locale: &LocaleConfig) -
         result.push(' '); // Space between integer and fraction
     }
 
-    // Determine numerator and denominator
-    let (numerator, denominator) = convert_to_fraction(fractional_part);
+    let has_fixed_denominator = format
+        .denominator
+        .iter()
+        .any(|token| matches!(token, FracToken::Number(_)) || matches!(token, FracToken::Digit(_)));
 
-    // Format numerator
-    let num_str = format_fraction_part(numerator, &format.numerator)?;
+    let (numerator, denominator) = if has_fixed_denominator {
+        let fixed_denominator = extract_fixed_denominator(&format.denominator);
+        let calculated_numerator = (fractional_part * fixed_denominator as f64).round() as i64;
+        (calculated_numerator, fixed_denominator)
+    } else {
+        convert_to_fraction(fractional_part)
+    };
 
-    // Format denominator
-    let denom_str = format_fraction_part(denominator, &format.denominator)?;
+    let num_formatted = format_number_part_for_fraction(numerator, &format.numerator, false)?;
+    let denom_formatted = format_number_part_for_fraction(denominator, &format.denominator, true)?;
 
     // Combine as a fraction
-    result.push_str(&format!("{}/{}", num_str, denom_str));
+    result.push_str(&format!("{}/{}", num_formatted, denom_formatted));
 
     // Add AM/PM if present
     if !format.ampm_part.is_empty() {
@@ -135,6 +142,36 @@ fn convert_to_fraction(value: f64) -> (i64, i64) {
     denominator /= gcd;
 
     (numerator, denominator)
+}
+
+/// Extract the fixed denominator value from fraction format tokens
+fn extract_fixed_denominator(tokens: &[FracToken]) -> i64 {
+    let mut result = 0;
+
+    for token in tokens {
+        match token {
+            FracToken::Number(n) => {
+                // A complete number token takes precedence
+                return *n as i64;
+            }
+            FracToken::Digit(d) => {
+                // For digit tokens, build the number digit by digit
+                result = result * 10 + (*d as i64);
+            }
+            _ => {
+                // Ignore other token types (placeholders, percent signs)
+            }
+        }
+    }
+
+    // If we didn't find any explicit numbers, return a default value
+    if result == 0 {
+        // Default to 10 if no specific denominator was found
+        // This shouldn't normally happen given our calling pattern
+        return 10;
+    }
+
+    result
 }
 
 /// Calculate Greatest Common Divisor using Euclidean algorithm
@@ -359,18 +396,45 @@ fn format_number_part(
     Ok(result)
 }
 
-/// Format a fraction part (numerator or denominator)
-fn format_fraction_part(value: i64, format_parts: &[FracToken]) -> FormatResult {
+fn format_number_part_for_fraction(
+    value: i64,
+    format_parts: &[FracToken],
+    is_denominator: bool,
+) -> FormatResult {
+    let has_fixed_numbers = format_parts
+        .iter()
+        .any(|token| matches!(token, FracToken::Number(_)) || matches!(token, FracToken::Digit(_)));
+
+    if has_fixed_numbers {
+        let mut result = String::new();
+        for token in format_parts {
+            match token {
+                FracToken::Number(n) => {
+                    result.push_str(&n.to_string());
+                }
+                FracToken::Digit(_) => {
+                    unreachable!()
+                }
+                FracToken::Percent => {
+                    result.push('%');
+                }
+                FracToken::Placeholder(_) => {
+                }
+            }
+        }
+        return Ok(result);
+    }
+
     let value_str = value.to_string();
     let mut result = String::new();
 
-    // Count digit placeholders
-    let digit_count = format_parts
+    let placeholders: Vec<&FracToken> = format_parts
         .iter()
         .filter(|token| matches!(token, FracToken::Placeholder(_)))
-        .count();
+        .collect();
 
-    // If value has more digits than the format can accommodate, return error
+    let digit_count = placeholders.len();
+
     if value_str.len() > digit_count && digit_count > 0 {
         return Err(FormatError::FormatError(format!(
             "Value {} has more digits than format can accommodate ({})",
@@ -378,18 +442,21 @@ fn format_fraction_part(value: i64, format_parts: &[FracToken]) -> FormatResult 
         )));
     }
 
-    let mut value_index = 0;
+    let value_digits: Vec<char> = value_str.chars().collect();
+    let mut placeholders_used = 0;
 
-    // Build the formatted fraction part
     for token in format_parts {
         match token {
             FracToken::Placeholder(placeholder) => {
-                let offset = value_str.len() as isize - digit_count as isize + value_index as isize;
-
-                if offset >= 0 && offset < value_str.len() as isize {
-                    result.push(value_str.chars().nth(offset as usize).unwrap());
+                let digit_index = if is_denominator {
+                    placeholders_used
                 } else {
-                    // Handle placeholders based on type
+                    value_digits.len() as isize - digit_count as isize + placeholders_used as isize
+                };
+
+                if digit_index >= 0 && digit_index < value_digits.len() as isize {
+                    result.push(value_digits[digit_index as usize]);
+                } else {
                     match placeholder {
                         NumPlaceholder::Zero => result.push('0'),
                         NumPlaceholder::Space => result.push(' '),
@@ -397,10 +464,13 @@ fn format_fraction_part(value: i64, format_parts: &[FracToken]) -> FormatResult 
                     }
                 }
 
-                value_index += 1;
+                placeholders_used += 1;
             }
             FracToken::Percent => {
                 result.push('%');
+            }
+            _ => {
+                unreachable!()
             }
         }
     }

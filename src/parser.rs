@@ -161,7 +161,7 @@ peg::parser! {
             / h:nf_part_hour() { NFDateTimeToken::Hour(h) }
             / s:nf_part_second() { NFDateTimeToken::Second(s) }
             / m:nf_part_month() { NFDateTimeToken::Month(m) }
-            // / m:nf_part_minute() { NFDateTimeToken::Minute(m) } 
+            // / m:nf_part_minute() { NFDateTimeToken::Minute(m) }
             // minute can only be parsed in patterns below
             / cb:nf_part_calendar_b() { NFDateTimeToken::CalendarB(cb) }
             / a:nf_abs_time_token() { NFDateTimeToken::Abs(a) }
@@ -217,7 +217,6 @@ peg::parser! {
                 / ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
                 / lit_str:literal_string() { NFDatetimeComponent::Literal(lit_str) }
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
-                // we can treat comma as literal in dt
                 / ascii_comma() { NFDatetimeComponent::Literal(",".to_string()) }
                 / bc:unmatched_literal_char() { NFDatetimeComponent::Literal(bc.to_string()) }
 
@@ -446,14 +445,37 @@ peg::parser! {
             = tokens:(
                 (t:nf_part_num_token1() { FracToken::Placeholder(t) })
                 / (ascii_percent_sign() { FracToken::Percent })
+                / (d:ascii_digit() { FracToken::Digit(d) })
                 )+ {?
+                // Check if it's all percent signs with no placeholders or digits
                 if tokens.iter().all(|t| matches!(t, FracToken::Percent)) {
-                    Err("Fraction part must contain at least one #, ?, or 0")
+                    Err("Fraction part must contain at least one #, ?, 0, or digit")
                 } else {
-                    Ok(tokens)
+                    let number_like = tokens.iter().all(|t| {
+                        matches!(t, FracToken::Digit(_)) || matches!(t, FracToken::Placeholder(NumPlaceholder::Zero))
+                    });
+                    let has_digit = tokens.iter().any(|t| matches!(t, FracToken::Digit(_)));
+                    
+                    if number_like && has_digit {
+                        let mut value = 0u32;
+                        for token in &tokens {
+                            match token {
+                                FracToken::Digit(d) => {
+                                    value = value * 10 + (*d as u32);
+                                },
+                                FracToken::Placeholder(NumPlaceholder::Zero) => {
+                                    value = value * 10; // Zero placeholder treated as digit 0
+                                },
+                                _ => {} // Shouldn't occur due to the looks_like_number check
+                            }
+                        }
+                        Ok(vec![FracToken::Number(value)])
+                    } else {
+                        Ok(tokens)
+                    }
                 }
             }
-            / expected!("fraction part (#, ?, 0, %)")
+            / expected!("fraction part (#, ?, 0, digits, %)")
 
         rule nf_part_number_1to4() -> u8 // Line 36
             = ascii_digit_one() { 1 }
