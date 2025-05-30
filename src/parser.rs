@@ -26,7 +26,7 @@ impl<'source> NumfmtParser<'source> {
 peg::parser! {
     grammar numfmt_parser() for str {
         pub rule all() -> NumFormat // Line 1
-            = f1:nf_any_no_text() ascii_semicolon() f2:nf_any_no_text() ascii_semicolon() f3:nf_any_no_text_no_cond() ascii_semicolon() f4:all_f4()? {
+            = f1:nf_any() ascii_semicolon() f2:nf_any() ascii_semicolon() f3:nf_any_no_cond() ascii_semicolon() f4:all_f4()? {
                 NumFormat::FourParts(
                     f1,
                     f2,
@@ -34,14 +34,14 @@ peg::parser! {
                     f4,
                 )
             }
-            / f1:nf_any_no_text() ascii_semicolon() f2:nf_any_no_text() ascii_semicolon() f3:nf_any_no_cond() {
+            / f1:nf_any() ascii_semicolon() f2:nf_any() ascii_semicolon() f3:nf_any_no_cond() {
                 NumFormat::ThreeParts(
                     f1,
                     f2,
                     f3,
                 )
             }
-            / f1:nf_any_no_text() ascii_semicolon() f2:nf_any() {
+            / f1:nf_any() ascii_semicolon() f2:nf_any() {
                 NumFormat::TwoParts(
                     f1,
                     f2,
@@ -57,15 +57,16 @@ peg::parser! {
                 })
             }
 
-            rule all_f4() -> TextOr<NFGeneral> // Custom
-                = t:nf_text() { TextOr::Text(t) }
-                / f:nf_general() { TextOr::Other(f) }
+            rule all_f4() -> NumberOrFracOrDtOrText // Custom
+                = t:nf_text() { NumberOrFracOrDtOrText::Text(t) }
+                / f:nf_general() { NumberOrFracOrDtOrText::General() }
 
-            rule num_or_frac_or_dt() -> NumberOrFracOrDt // Custom
-                = p:nf_parenthesized_number() { NumberOrFracOrDt::ParenthesizedNumber(p) }
-                / quiet!{ f:nf_fraction() { NumberOrFracOrDt::Fraction(f) } }
-                / n:nf_number() { NumberOrFracOrDt::Number(n) }
-                / dt:datetime_tuple() { NumberOrFracOrDt::Datetime(dt) }
+            rule num_or_frac_or_dt_or_text() -> NumberOrFracOrDtOrText // Custom
+                = p:nf_parenthesized_number() { NumberOrFracOrDtOrText::ParenthesizedNumber(p) }
+                / quiet!{ f:nf_fraction() { NumberOrFracOrDtOrText::Fraction(f) } }
+                / n:nf_number() { NumberOrFracOrDtOrText::Number(n) }
+                / dt:datetime_tuple() { NumberOrFracOrDtOrText::Datetime(dt) }
+                / t:nf_text() { NumberOrFracOrDtOrText::Text(t) }
 
             rule nf_parenthesized_number() -> NFNumber // Custom
                 = quiet!{
@@ -76,30 +77,15 @@ peg::parser! {
                   }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
-                = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {
-                    DatetimeTuple(dt1, g, dt2)
+                = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {?
+                    if dt1.is_none() && dt2.is_none() {
+                        return Err("At least one datetime must be present");
+                    }
+                    Ok(DatetimeTuple(dt1, g, dt2))
                 }
 
-        rule nf_any() -> Any // Line 2
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
-                Any::Other(SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: AnyInner::ConditionalData(condition, data),
-                })
-            }
-            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
-                Any::Text(SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: text,
-                })
-            }
-
-        rule nf_any_no_text() -> AnyNoText // Line 3
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt() {
+        rule nf_any() -> SectionWrapper<AnyInner> // Line 2
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt_or_text() {
                 SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
@@ -107,27 +93,19 @@ peg::parser! {
                     inner: AnyInner::ConditionalData(condition, data),
                 }
             }
+
+        // rule nf_any_no_text() -> AnyNoText // Line 3
+        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:num_or_frac_or_dt_or_text() {
+        //         SectionWrapper {
+        //             is_thai_prefixed: t_prefix.is_some(),
+        //             locale,
+        //             color,
+        //             inner: AnyInner::ConditionalData(condition, data),
+        //         }
+        //     }
 
         rule nf_any_no_cond() -> AnyNoCond // Line 4
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
-                SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: TextOr::Other(data),
-                }
-            }
-            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? text:nf_text() {
-                SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
-                    locale,
-                    color,
-                    inner: TextOr::Text(text),
-                }
-            }
-
-        rule nf_any_no_text_no_cond() -> AnyNoTextNoCond // Line 5
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt() {
+            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt_or_text() {
                 SectionWrapper {
                     is_thai_prefixed: t_prefix.is_some(),
                     locale,
@@ -135,6 +113,24 @@ peg::parser! {
                     inner: data,
                 }
             }
+            / f:nf_general() {
+                SectionWrapper {
+                    is_thai_prefixed: false,
+                    locale: None,
+                    color: None,
+                    inner: NumberOrFracOrDtOrText::General(),
+                }
+            }
+
+        // rule nf_any_no_text_no_cond() -> AnyNoTextNoCond // Line 5
+        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:num_or_frac_or_dt_or_text() {
+        //         SectionWrapper {
+        //             is_thai_prefixed: t_prefix.is_some(),
+        //             locale,
+        //             color,
+        //             inner: data,
+        //         }
+        //     }
 
         rule nf_general() -> NFGeneral // Line 6
             = intl_numfmt_general() { NFGeneral {} }
@@ -173,11 +169,14 @@ peg::parser! {
             / s:nf_part_abs_second() { AbsTimeToken::AbsSecond(s) }
 
         rule nf_datetime() -> NFDatetime // Line 10
-            = ampms:intl_ampm()* components:(dt_token_or_component())+ {
+            = ampms:intl_ampm()* components:(dt_token_or_component())+ {?
                 let all_components = components.into_iter().flatten()
                     .chain(ampms.into_iter().map(NFDatetimeComponent::AMPM))
-                    .collect();
-                NFDatetime { components: all_components }
+                    .collect::<Vec<_>>();
+                if !all_components.iter().any(|c| matches!(c, NFDatetimeComponent::Token(_))) {
+                    return Err("At least one token must be present");
+                }
+                Ok(NFDatetime { components: all_components })
             }
 
             rule dt_token_or_component() -> Vec<NFDatetimeComponent>
@@ -219,7 +218,7 @@ peg::parser! {
                 / bc:unmatched_literal_char() { NFDatetimeComponent::Literal(bc.to_string()) }
 
         rule nf_text() -> NFText // Line 11
-            = elements:(nf_text_element())+ !nf_text_element() {
+            = elements:(nf_text_element())+ {
                 NFText { elements }
             }
 
@@ -230,7 +229,7 @@ peg::parser! {
                 / ls:literal_string() { TextFormatElement::LiteralString(ls) }
                 / fc:literal_char_repeat() { TextFormatElement::FillChar(fc) }
                 / ec:literal_char() { TextFormatElement::EscapedChar(ec) }
-                / bc:unmatched_literal_char() { TextFormatElement::BareChar(bc) }
+                / bc:unmatched_literal_char() { TextFormatElement::LiteralString(bc.to_string()) }
 
         rule nf_fraction() -> NFFraction // Line 12
             = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
@@ -257,6 +256,8 @@ peg::parser! {
                     && tks.last().is_some_and(|t| matches!(t, DigitPosOrOther::Other(_)))
                 {
                     Err("Invalid number format: percent sign at both ends")
+                } else if !tks.iter().any(|t| matches!(t, DigitPosOrOther::Digit(_))) {
+                    Err("Invalid number format: must contain at least one digit")
                 } else {
                     Ok(tks)
                 }
@@ -269,6 +270,7 @@ peg::parser! {
                 / lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
                 / fill_char:literal_char_repeat() { DigitPosOrOther::FillChar(fill_char) }
                 / esc_char:literal_char() { DigitPosOrOther::EscapedChar(esc_char) }
+                / bare_char:unmatched_literal_char() { DigitPosOrOther::LiteralString(bare_char.to_string()) }
 
         rule nf_part_exponential() -> Sign // Line 14
             = ascii_capital_letter_e() sgn:nf_part_sign() { sgn }
@@ -453,7 +455,7 @@ peg::parser! {
                         matches!(t, FracToken::Digit(_)) || matches!(t, FracToken::Placeholder(NumPlaceholder::Zero))
                     });
                     let has_digit = tokens.iter().any(|t| matches!(t, FracToken::Digit(_)));
-                    
+
                     if number_like && has_digit {
                         let mut value = 0u32;
                         for token in &tokens {
@@ -462,7 +464,7 @@ peg::parser! {
                                     value = value * 10 + (*d as u32);
                                 },
                                 FracToken::Placeholder(NumPlaceholder::Zero) => {
-                                    value = value * 10; // Zero placeholder treated as digit 0
+                                    value *= 10; // Zero placeholder treated as digit 0
                                 },
                                 _ => {} // Shouldn't occur due to the looks_like_number check
                             }
@@ -520,9 +522,9 @@ peg::parser! {
         rule intl_char_numgrp_sep() -> () // Line 46
             = ascii_comma()
 
-        rule intl_char_date_sep() -> char // Line 47
-            = ascii_solidus() { '/' }
-            / ascii_hyphen_minus() { '-' }
+        // rule intl_char_date_sep() -> char // Line 47
+        //     = ascii_solidus() { '/' }
+        //     / ascii_hyphen_minus() { '-' }
 
         rule intl_char_time_sep() -> char // Line 48
             = ascii_colon() { ':' }
@@ -549,9 +551,10 @@ peg::parser! {
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
 
         rule unmatched_literal_char() -> char
-            = !nf_general() !nf_number() !nf_datetime_token() !intl_ampm()
-            !nf_abs_time_token() !nf_fraction() !nf_parenthesized_number()
-            c:utf16_any() { c }
+            = !nf_general() !nf_datetime_token() !intl_ampm() !nf_part_num_token1()
+            !nf_abs_time_token() !nf_parenthesized_number() !nf_part_num_token2()
+            !ascii_commercial_at() !ascii_left_square_bracket() !ascii_right_square_bracket()
+            !ascii_semicolon() c:utf16_any() { c }
 
         rule ascii_space() -> ()
             = [' '] { }

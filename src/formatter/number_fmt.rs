@@ -418,8 +418,7 @@ fn format_number_part_for_fraction(
                 FracToken::Percent => {
                     result.push('%');
                 }
-                FracToken::Placeholder(_) => {
-                }
+                FracToken::Placeholder(_) => {}
             }
         }
         return Ok(result);
@@ -451,7 +450,7 @@ fn format_number_part_for_fraction(
                 let digit_index = if is_denominator {
                     placeholders_used
                 } else {
-                    value_digits.len() as isize - digit_count as isize + placeholders_used as isize
+                    value_digits.len() as isize - digit_count as isize + placeholders_used
                 };
 
                 if digit_index >= 0 && digit_index < value_digits.len() as isize {
