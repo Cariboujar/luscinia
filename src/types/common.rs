@@ -45,6 +45,7 @@ pub enum NFPartColor {
 #[repr(u8)]
 pub enum NFCondOperator {
     Equal,
+    NotEqual,
     GreaterThan,
     LessThan,
     GreaterThanOrEqual,

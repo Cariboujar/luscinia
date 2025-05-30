@@ -320,6 +320,7 @@ fn format_defined_color(color: &DefinedColor) -> String {
 fn evaluate_condition(value: f64, condition: &NFPartCondition) -> bool {
     match condition.op {
         NFCondOperator::Equal => value == condition.value,
+        NFCondOperator::NotEqual => value != condition.value,
         NFCondOperator::GreaterThan => value > condition.value,
         NFCondOperator::LessThan => value < condition.value,
         NFCondOperator::GreaterThanOrEqual => value >= condition.value,
