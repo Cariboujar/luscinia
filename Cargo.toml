@@ -8,3 +8,6 @@ chrono = "0.4.41"
 peg = "0.8.5"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+
+[features]
+trace = ["peg/trace"]
