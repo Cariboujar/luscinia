@@ -38,4 +38,31 @@ mod tests {
             println!("{}", fmt_pretty);
         }
     }
+
+    #[test]
+    fn test_nfp_formats() {
+        let nfp = std::fs::read_to_string("src/nfp.txt").unwrap();
+        let nfp = nfp.split('\n');
+        let mut errors = Vec::new();
+        
+        for (i, line) in nfp.enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+            
+            match parse_fmtstr(line) {
+                Ok(_) => {},
+                Err(e) => {
+                    println!("Failed to parse format string at line {}: {}", i, line);
+                    println!("Error: {:?}", e);
+                    errors.push(format!("{}: {} - {:?}", i, line, e));
+                }
+            }
+        }
+        
+        if !errors.is_empty() {
+            std::fs::write("failed_formats.txt", errors.join("\n")).unwrap();
+            println!("Wrote {} errors to failed_formats.txt", errors.len());
+        }
+    }
 }
