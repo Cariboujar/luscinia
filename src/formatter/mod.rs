@@ -231,42 +231,43 @@ mod tests {
 
     #[test]
     fn test_time_formats() {
-        // TODO: LLM Generated, haven't been reviewed.
-        // Time formatting - using a fixed time value representing 15:30:45
-        let excel_time = 0.647049; // Excel time value for 15:30:45
+        // Time formatting - using a fixed time value representing 15:31:45
+        // Excel 时间是一个小数，表示一天中的时间比例
+        // 15:31:45 = (15*3600 + 31*60 + 45) / 86400 = 0.647049
+        let excel_time = (15.0*3600.0 + 31.0*60.0 + 45.0) / 86400.0; // 精确计算 15:31:45 对应的 Excel 时间值
+        println!("Excel time value for 15:31:45: {}", excel_time);
 
-        assert_eq!(test_format(excel_time, "h:mm").unwrap(), "15:30");
-        assert_eq!(test_format(excel_time, "h:mm:ss").unwrap(), "15:30:45");
-        assert_eq!(test_format(excel_time, "h:mm AM/PM").unwrap(), "3:30 PM");
+        assert_eq!(test_format(excel_time, "h:mm").unwrap(), "15:31");
+        assert_eq!(test_format(excel_time, "h:mm:ss").unwrap(), "15:31:45");
+        assert_eq!(test_format(excel_time, "h:mm AM/PM").unwrap(), "3:31 PM");
         assert_eq!(
             test_format(excel_time, "h:mm:ss AM/PM").unwrap(),
-            "3:30:45 PM"
+            "3:31:45 PM"
         );
-        assert_eq!(test_format(excel_time, "[h]:mm:ss").unwrap(), "15:30:45");
-        assert_eq!(test_format(excel_time, "mm:ss").unwrap(), "30:45");
+        assert_eq!(test_format(excel_time, "[h]:mm:ss").unwrap(), "15:31:45");
+        assert_eq!(test_format(excel_time, "mm:ss").unwrap(), "31:45");
         assert_eq!(
-            test_format(excel_time, "h \"小时\" m \"分钟\"").unwrap(),
-            "15 小时 30 分钟"
+            test_format(excel_time, "h\" 小时 \"m\" 分钟\"").unwrap(),
+            "15 小时 31 分钟"
         );
     }
 
     #[test]
     fn test_datetime_formats() {
-        // TODO: LLM Generated, haven't been reviewed.
-        // Combined date and time - using May 15, 2023 15:30:45
+        // Combined date and time - using May 15, 2023 15:31:45
         let excel_datetime = 45061.647049;
 
         assert_eq!(
             test_format(excel_datetime, "yyyy-mm-dd hh:mm:ss").unwrap(),
-            "2023-05-15 15:30:45"
+            "2023-05-15 15:31:45"
         );
         assert_eq!(
             test_format(excel_datetime, "m/d/yyyy h:mm AM/PM").unwrap(),
-            "5/15/2023 3:30 PM"
+            "5/15/2023 3:31 PM"
         );
         assert_eq!(
             test_format(excel_datetime, "dddd, mmmm dd, yyyy h:mm:ss").unwrap(),
-            "Monday, May 15, 2023 15:30:45"
+            "Monday, May 15, 2023 15:31:45"
         );
     }
 

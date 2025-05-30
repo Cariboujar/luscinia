@@ -39,23 +39,38 @@ pub fn format_nf_datetime(
     format: &NFDatetime,
     locale: &LocaleConfig,
 ) -> FormatResult {
+    let has_ampm = format
+        .components
+        .iter()
+        .any(|comp| matches!(comp, NFDatetimeComponent::AMPM(_)));
     let mut result = String::new();
 
     // Process each component in the format
     for component in &format.components {
         match component {
             NFDatetimeComponent::Token(token) => {
-                result.push_str(&format_datetime_token(datetime, token, locale)?);
+                if let NFDateTimeToken::Hour(fmt) = token {
+                    if has_ampm {
+                        let mut hour_12 = datetime.hour() % 12;
+                        if hour_12 == 0 {
+                            hour_12 = 12;
+                        }
+                        result.push_str(&format_hour(hour_12 as i32, *fmt)?);
+                    } else {
+                        result.push_str(&format_datetime_token(datetime, token, locale)?);
+                    }
+                } else {
+                    result.push_str(&format_datetime_token(datetime, token, locale)?);
+                }
             }
             NFDatetimeComponent::SubSecond(subsec_fmt) => {
                 result.push_str(&format_subsecond(datetime, subsec_fmt));
             }
-            NFDatetimeComponent::DateSeparator => {
-                // Use locale-specific date separator
-                result.push('/');
+            NFDatetimeComponent::DateSeparator(c) => {
+                result.push(*c);
             }
-            NFDatetimeComponent::TimeSeparator => {
-                result.push(':');
+            NFDatetimeComponent::TimeSeparator(c) => {
+                result.push(*c);
             }
             NFDatetimeComponent::AMPM(ampm) => {
                 let is_pm = datetime.hour() >= 12;
@@ -86,8 +101,7 @@ pub fn format_datetime_token(
             locale,
         ),
         NFDateTimeToken::Hour(fmt) => {
-            let hour = datetime.hour() % 12;
-            let hour = if hour == 0 { 12 } else { hour }; // 12-hour format
+            let hour = datetime.hour();
             format_hour(hour as i32, *fmt)
         }
         NFDateTimeToken::Minute(fmt) => format_minute(datetime.minute() as i32, *fmt),
@@ -277,18 +291,9 @@ fn format_ampm(ampm: &AmPm, is_pm: bool) -> String {
 
 /// Convert Excel serial date to DateTime
 fn excel_serial_to_datetime(serial: f64) -> Result<DateTime<Local>, FormatError> {
-    // Excel dates start from 1900-01-01, which is 1 in Excel
-    // But there's a leap year bug in Excel - it incorrectly treats 1900 as a leap year
-    // so any date after February 28, 1900 is off by 1 day
-
-    // Extract days and time portions
     let days = serial.trunc() as i64;
     let time_fraction = serial.fract();
-
-    // Adjust for Excel's leap year bug
     let adjusted_days = if days > 60 { days - 1 } else { days };
-
-    // Base date: 1899-12-31 (day 0 in Excel)
     let base_date = match NaiveDateTime::parse_from_str("1899-12-31 00:00:00", "%Y-%m-%d %H:%M:%S")
     {
         Ok(dt) => dt,
@@ -299,10 +304,8 @@ fn excel_serial_to_datetime(serial: f64) -> Result<DateTime<Local>, FormatError>
         }
     };
 
-    // Add days
     let date_part = base_date + chrono::Duration::days(adjusted_days);
 
-    // Add time fraction (convert to seconds)
     let seconds = (time_fraction * 86400.0).round() as i64; // 86400 seconds in a day
     let time_part = date_part + chrono::Duration::seconds(seconds);
 
