@@ -7,25 +7,16 @@ use chrono::{DateTime, Datelike, Local, NaiveDateTime, TimeZone, Timelike};
 
 /// Format a datetime value according to DatetimeTuple format specification
 pub fn format_datetime(value: f64, format: &DatetimeTuple, locale: &LocaleConfig) -> FormatResult {
-    // Convert Excel serial date to datetime
-    // Excel dates are stored as days since 1900-01-01, with special handling for leap years
     let datetime = excel_serial_to_datetime(value)?;
 
     let mut result = String::new();
 
-    // Format first datetime part if present
     if let Some(dt_part1) = &format.0 {
         result.push_str(&format_nf_datetime(&datetime, dt_part1, locale)?);
     }
-
-    // Format general part if present
-    if let Some(general) = &format.1 {
-        // General part usually just adds some text or formatting
-        // For now, we'll just add a placeholder
-        result.push_str("[General]");
+    if format.1.is_some() {
+        result.push_str(&value.to_string());
     }
-
-    // Format second datetime part if present
     if let Some(dt_part2) = &format.2 {
         result.push_str(&format_nf_datetime(&datetime, dt_part2, locale)?);
     }
@@ -45,7 +36,6 @@ pub fn format_nf_datetime(
         .any(|comp| matches!(comp, NFDatetimeComponent::AMPM(_)));
     let mut result = String::new();
 
-    // Process each component in the format
     for component in &format.components {
         match component {
             NFDatetimeComponent::Token(token) => {
@@ -62,9 +52,6 @@ pub fn format_nf_datetime(
                 } else {
                     result.push_str(&format_datetime_token(datetime, token, locale)?);
                 }
-            }
-            NFDatetimeComponent::SubSecond(subsec_fmt) => {
-                result.push_str(&format_subsecond(datetime, subsec_fmt));
             }
             NFDatetimeComponent::DateSeparator(c) => {
                 result.push(*c);
@@ -106,15 +93,16 @@ pub fn format_datetime_token(
         }
         NFDateTimeToken::Minute(fmt) => format_minute(datetime.minute() as i32, *fmt),
         NFDateTimeToken::Second(fmt) => format_second(datetime.second() as i32, *fmt),
-        NFDateTimeToken::EraG(fmt) => {
-            // Era formatting - simplified implementation
-            Ok("AD".to_string())
+        NFDateTimeToken::SubSecond(fmt) => format_subsecond(datetime, fmt),
+        NFDateTimeToken::EraG(_fmt) => {
+            // jp era
+            Ok("平成".to_string())
         }
         NFDateTimeToken::EraYear(fmt) => {
             // Era year - simplified implementation
             format_era_year(datetime.year(), *fmt)
         }
-        NFDateTimeToken::CalendarB(fmt) => {
+        NFDateTimeToken::CalendarB(_fmt) => {
             // Calendar type - simplified implementation
             Ok("1".to_string())
         }
@@ -131,7 +119,7 @@ fn format_year(year: i32, fmt: &YearFormat) -> FormatResult {
 }
 
 /// Format month component
-fn format_month(month: i32, fmt: MonthFormat, locale: &LocaleConfig) -> FormatResult {
+fn format_month(month: i32, fmt: MonthFormat, _locale: &LocaleConfig) -> FormatResult {
     match fmt.0 {
         1 => Ok(format!("{}", month)),
         2 => Ok(format!("{:02}", month)),
@@ -170,7 +158,7 @@ fn format_month(month: i32, fmt: MonthFormat, locale: &LocaleConfig) -> FormatRe
 }
 
 /// Format day component
-fn format_day(day: i32, weekday: u32, fmt: DayFormat, locale: &LocaleConfig) -> FormatResult {
+fn format_day(day: i32, weekday: u32, fmt: DayFormat, _locale: &LocaleConfig) -> FormatResult {
     match fmt.0 {
         1 => Ok(format!("{}", day)),
         2 => Ok(format!("{:02}", day)),
@@ -220,6 +208,18 @@ fn format_second(second: i32, fmt: SecondFormat) -> FormatResult {
     }
 }
 
+/// Format subsecond component
+fn format_subsecond(datetime: &DateTime<Local>, fmt: &SubSecondFormat) -> FormatResult {
+    let millis = datetime.nanosecond() / 1_000_000;
+
+    match fmt.0 {
+        1 => Ok(format!(".{}", millis / 100)),
+        2 => Ok(format!(".{:02}", millis / 10)),
+        3 => Ok(format!(".{:03}", millis)),
+        _ => Ok(format!(".{:03}", millis)),
+    }
+}
+
 /// Format era year component
 fn format_era_year(year: i32, fmt: EraYearFormat) -> FormatResult {
     // Simplified implementation for era year
@@ -255,18 +255,6 @@ fn format_abs_time_token(datetime: &DateTime<Local>, token: &AbsTimeToken) -> Fo
 fn format_abs_value(value: i32, num_digits: u8) -> FormatResult {
     let format_str = format!("{:0width$}", value, width = num_digits as usize);
     Ok(format_str)
-}
-
-/// Format subsecond component
-fn format_subsecond(datetime: &DateTime<Local>, fmt: &SubSecondFormat) -> String {
-    let millis = datetime.nanosecond() / 1_000_000;
-
-    match fmt.0 {
-        1 => format!(".{}", millis / 100),
-        2 => format!(".{:02}", millis / 10),
-        3 => format!(".{:03}", millis),
-        _ => format!(".{:03}", millis),
-    }
 }
 
 /// Format AM/PM indicator
