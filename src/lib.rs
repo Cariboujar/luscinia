@@ -40,6 +40,38 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
+    fn test_from_pipe() {
+        use std::io::{self, Read};
+        
+        let mut input = String::new();
+        io::stdin().read_to_string(&mut input).expect("Failed to read from stdin");
+        let input = input.trim();
+        
+        if input.is_empty() {
+            println!("No input provided. Please pipe a format string to this test.");
+            return;
+        }
+        
+        println!("Parsing format string: {}", input);
+        let res = parse_fmtstr(input);
+        
+        match &res {
+            Ok(format) => {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(format).unwrap()
+                );
+            },
+            Err(e) => {
+                println!("Error parsing format string: {:?}", e);
+            }
+        }
+        
+        assert!(res.is_ok(), "Failed to parse format string: {:?}", res.err().unwrap());
+    }
+    
+    #[test]
     fn test_nfp_formats() {
         let nfp = std::fs::read_to_string("src/nfp.txt").unwrap();
         let nfp = nfp.split('\n');
