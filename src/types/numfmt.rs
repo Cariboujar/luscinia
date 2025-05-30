@@ -27,7 +27,6 @@ pub type AnyNoTextNoCond = SectionWrapper<NumberOrFracOrDtOrText>;
 pub enum NumberOrFracOrDtOrText {
     General(),
     Number(NFNumber),
-    ParenthesizedNumber(NFNumber),
     Fraction(NFFraction),
     Datetime(DatetimeTuple),
     Text(NFText),

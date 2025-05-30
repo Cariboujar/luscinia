@@ -23,6 +23,9 @@ pub fn format_nf_number(value: f64, format: &NFNumber, locale: &LocaleConfig) ->
         abs_value
     };
 
+    // Check if the format is a parenthesized format by examining first and last tokens
+    let has_parentheses = is_parenthesized_format(&format.num_part);
+
     if let Some((sign, exp_part)) = &format.exp_part {
         let (mantissa, exponent) = scientific_decompose(formatting_value);
         let mantissa_str =
@@ -53,22 +56,34 @@ pub fn format_nf_number(value: f64, format: &NFNumber, locale: &LocaleConfig) ->
         result.push('%');
     }
 
-    // Handle negative sign
-    if is_negative {
+    // If we have parentheses in the format, the number is already wrapped in parentheses
+    // so we don't need to add a negative sign
+    if is_negative && !has_parentheses {
         result = format!("-{}", result);
     }
 
     Ok(result)
 }
 
-/// Format a number with parentheses for negative values
-pub fn format_parenthesized_number(
-    value: f64,
-    format: &NFNumber,
-    locale: &LocaleConfig,
-) -> FormatResult {
-    let result = format_nf_number(value.abs(), format, locale)?;
-    Ok(format!("({})", result))
+/// Check if a number format is parenthesized (starts with '(' and ends with ')')
+fn is_parenthesized_format(format_parts: &[DigitPosOrOther<Percent>]) -> bool {
+    if format_parts.len() < 2 {
+        return false;
+    }
+    
+    let starts_with_paren = match &format_parts[0] {
+        DigitPosOrOther::LiteralString(s) => s == "(",
+        DigitPosOrOther::EscapedChar(c) => *c == '(',
+        _ => false,
+    };
+    
+    let ends_with_paren = match &format_parts[format_parts.len() - 1] {
+        DigitPosOrOther::LiteralString(s) => s == ")",
+        DigitPosOrOther::EscapedChar(c) => *c == ')',
+        _ => false,
+    };
+    
+    starts_with_paren && ends_with_paren
 }
 
 /// Format a fraction according to NFFraction format specification
@@ -372,9 +387,10 @@ fn format_number_part(
             DigitPosOrOther::LiteralString(s) => {
                 dec_result.push_str(s);
             }
-            DigitPosOrOther::LiteralCharSpace(c) => {
+            DigitPosOrOther::LiteralCharSpace(_c) => {
+                // the width should be same as `c`, however as string
+                // we can only push one space
                 dec_result.push(' ');
-                dec_result.push(*c);
             }
             DigitPosOrOther::FillChar(c) => {
                 dec_result.push(*c);
