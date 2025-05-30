@@ -1,11 +1,11 @@
-general
+General
 0
 0.00
 #,##0
 #,##0.00
 0%
 0.00%
-0.00e+00
+0.00E+00
 # ?/?
 # ??/??
 mm-dd-yy
@@ -18,16 +18,16 @@ hh:mm
 hh:mm:ss
 m/d/yy hh:mm
 #,##0 ;(#,##0)
-#,##0 ;[red](#,##0)
+#,##0 ;[Red](#,##0)
 #,##0.00;(#,##0.00)
-#,##0.00;[red](#,##0.00)
+#,##0.00;[Red](#,##0.00)
 _(* #,##0_);_(* \(#,##0\);_(* "-"_);_(@_)
 _("$"* #,##0_);_("$"* \(#,##0\);_("$"* "-"_);_(@_)
 _(* #,##0.00_);_(* \(#,##0.00\);_(* "-"??_);_(@_)
 mm:ss
 [h]:mm:ss
 mmss.0
-##0.0e+0
+##0.0E+0
 @
 **x
 [$-]
@@ -207,7 +207,7 @@ DD.MM.YYYY;@
 DDD
 DDDD
 DDDD", "MMMM\ DD", "YYYY
-GENERAL
+General
 General
 H
 H:MM:SS\ AM/PM
@@ -287,7 +287,7 @@ YYYY\-MM\-DD
 [>=100000]0.000\ \";[Red]0.000\ \<\ \>\ \"\ \&\ \'\ 
 [>=100000]0.000\ \<;[Red]0.000\ \>
 [BLACK]@
-[BLUE]GENERAL
+[BLUE]General
 [Black]@
 [Blue]General
 [CYAN]@
@@ -357,7 +357,7 @@ YYYY\-MM\-DD
 [JPN][$-411]gggyy"年"m"月"d"日"\ dddd;@
 [MAGENTA]0.00
 [Magenta]0.00
-[RED]#.##
+[Red]#.##
 [Red]#.##
 [Red][<-25]General;[Blue][>25]General;[Green]General;[Yellow]General\ 
 [Red][<=-25]General;[Blue][>=25]General;[Green]General;[Yellow]General
