@@ -13,7 +13,7 @@ impl<'source> NumfmtParser<'source> {
     }
 
     pub fn parse(&self) -> PResult<NumFormat> {
-        numfmt_parser::all(self.src)
+        numfmt_parser::toplevel(self.src)
     }
 }
 
@@ -25,6 +25,20 @@ impl<'source> NumfmtParser<'source> {
 // https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/0e59abdb-7f4e-48fc-9b89-67832fa11789
 peg::parser! {
     grammar numfmt_parser() for str {
+        
+        rule traced<T>(e: rule<T>) -> T =
+            &(input:$([_]*) {
+                #[cfg(feature = "trace")]
+                println!("[PEG_INPUT_START]\n{}\n[PEG_TRACE_START]", input);
+            })
+            e:e()? {?
+                #[cfg(feature = "trace")]
+                println!("[PEG_TRACE_STOP]");
+                e.ok_or("")
+            }
+        
+        pub rule toplevel() -> NumFormat = traced(<all()>)
+
         pub rule all() -> NumFormat // Line 1
             = f1:nf_any() ascii_semicolon() f2:nf_any() ascii_semicolon() f3:nf_any_no_cond() ascii_semicolon() f4:all_f4()? {
                 NumFormat::FourParts(
@@ -889,6 +903,6 @@ peg::parser! {
                     0u128,
                     |acc, &d| acc * 10 + d as u128
                 )
-            }
+            }        
     }
 }
