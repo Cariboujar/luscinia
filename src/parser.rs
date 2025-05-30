@@ -62,19 +62,10 @@ peg::parser! {
                 / f:nf_general() { NumberOrFracOrDtOrText::General() }
 
             rule num_or_frac_or_dt_or_text() -> NumberOrFracOrDtOrText // Custom
-                = p:nf_parenthesized_number() { NumberOrFracOrDtOrText::ParenthesizedNumber(p) }
-                / quiet!{ f:nf_fraction() { NumberOrFracOrDtOrText::Fraction(f) } }
+                = f:nf_fraction() { NumberOrFracOrDtOrText::Fraction(f) }
                 / n:nf_number() { NumberOrFracOrDtOrText::Number(n) }
                 / dt:datetime_tuple() { NumberOrFracOrDtOrText::Datetime(dt) }
                 / t:nf_text() { NumberOrFracOrDtOrText::Text(t) }
-
-            rule nf_parenthesized_number() -> NFNumber // Custom
-                = quiet!{
-                    ascii_left_parenthesis()
-                    inner_num:nf_number()
-                    ascii_right_parenthesis()
-                    { inner_num }
-                  }
 
             rule datetime_tuple() -> DatetimeTuple // Custom
                 = dt1:nf_datetime()? g:nf_general()? dt2:nf_datetime()? {?
@@ -213,6 +204,8 @@ peg::parser! {
             rule nf_datetime_component() -> NFDatetimeComponent // Custom
                 = ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
                 / lit_str:literal_string() { NFDatetimeComponent::Literal(lit_str) }
+                / date_sep:intl_char_date_sep() { NFDatetimeComponent::Literal(date_sep.to_string()) }
+                / time_sep:intl_char_time_sep() { NFDatetimeComponent::Literal(time_sep.to_string()) }
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
                 / ascii_comma() { NFDatetimeComponent::Literal(",".to_string()) }
                 / bc:unmatched_literal_char() { NFDatetimeComponent::Literal(bc.to_string()) }
@@ -232,7 +225,7 @@ peg::parser! {
                 / bc:unmatched_literal_char() { TextFormatElement::LiteralString(bc.to_string()) }
 
         rule nf_fraction() -> NFFraction // Line 12
-            = int_part:nf_part_num() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
+            = int_part:nf_num_only() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
                 NFFraction {
                     integer_part: Some(int_part),
                     numerator: num,
@@ -248,6 +241,11 @@ peg::parser! {
                     ampm_part: ampm,
                 }
             }
+
+            rule nf_num_only() -> Vec<DigitPosOrOther<Percent>>
+                = tks:nf_part_num_token1()+ {
+                    tks.into_iter().map(|t| DigitPosOrOther::Digit(DigitPos::Digit(t))).collect()
+                }
 
         rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
             = tks:nf_format_element()+ {
@@ -523,9 +521,9 @@ peg::parser! {
         rule intl_char_numgrp_sep() -> () // Line 46
             = ascii_comma()
 
-        // rule intl_char_date_sep() -> char // Line 47
-        //     = ascii_solidus() { '/' }
-        //     / ascii_hyphen_minus() { '-' }
+        rule intl_char_date_sep() -> char // Line 47
+            = ascii_solidus() { '/' }
+            / ascii_hyphen_minus() { '-' }
 
         rule intl_char_time_sep() -> char // Line 48
             = ascii_colon() { ':' }
@@ -553,9 +551,8 @@ peg::parser! {
 
         rule unmatched_literal_char() -> char
             = !nf_general() !nf_datetime_token() !intl_ampm() !nf_part_num_token1()
-            !nf_abs_time_token() !nf_parenthesized_number() !nf_part_num_token2()
-            !ascii_commercial_at() !ascii_left_square_bracket() !ascii_right_square_bracket()
-            !ascii_semicolon() c:utf16_any() { c }
+            !nf_abs_time_token() !nf_part_num_token2() !ascii_solidus() !ascii_commercial_at()
+            !ascii_semicolon() !nf_part_exponential() !nf_part_fraction() c:utf16_any() { c }
 
         rule ascii_space() -> ()
             = [' '] { }

@@ -20,9 +20,9 @@ pub fn format_text(value: &str, format: &NFText, _locale: &LocaleConfig) -> Form
                 // For consistency, we'll render it as is
                 result.push_str(&format_ampm(ampm, false)); // Default to AM
             }
-            TextFormatElement::LiteralCharSpace(c) => {
-                result.push(' '); // Space character
-                result.push(*c); // Following character
+            TextFormatElement::LiteralCharSpace(_c) => {
+                // the width should be same as c but we can't handle it in string
+                result.push(' ');
             }
             TextFormatElement::LiteralString(s) => {
                 result.push_str(s);

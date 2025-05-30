@@ -157,7 +157,6 @@ mod tests {
 
     #[test]
     fn test_parenthesized_numbers() {
-        println!("Test parenthesized numbers");
         // 测试带括号的数字格式 - 应该始终使用括号，无论数字是正还是负
         assert_eq!(test_format(1234.56, "(#,##0.00)").unwrap(), "(1,234.56)");
         assert_eq!(test_format(-1234.56, "(#,##0.00)").unwrap(), "(1,234.56)");
@@ -271,6 +270,7 @@ mod tests {
 
     #[test]
     fn test_fraction_formats() {
+        assert_eq!(test_format(0.5, "# ??/??").unwrap(), "  1/2 ");
         assert_eq!(test_format(1.25, "# ?/?").unwrap(), "1 1/4");
         assert_eq!(test_format(1.33333, "# ?/3").unwrap(), "1 1/3");
         assert_eq!(test_format(1.66667, "# ?/3").unwrap(), "1 2/3");
@@ -350,6 +350,39 @@ mod tests {
         assert_eq!(
             test_format(1234567.0, "[<=9999999]###-####;(###) ###-####").unwrap(),
             "123-4567"
+        );
+        
+        // Custom delimiters test
+        assert_eq!(test_format(1234.567, "#,##0.00_-").unwrap(), "1,234.57 ");
+        assert_eq!(test_format(1234.567, "#,##0.00\\-").unwrap(), "1,234.57-");
+    }
+    
+    #[test]
+    fn test_advanced_formats() {
+        // Braces and other special characters
+        assert_eq!(test_format(1234.56, "{#,##0.00}").unwrap(), "{1,234.56}");
+        assert_eq!(test_format(-1234.56, "{#,##0.00}").unwrap(), "-{1,234.56}");
+        
+        // Mixed text and numbers
+        assert_eq!(test_format(1234.56, "\"Total: \"#,##0.00").unwrap(), "Total: 1,234.56");
+        assert_eq!(test_format(-1234.56, "\"Total: \"#,##0.00").unwrap(), "-Total: 1,234.56");
+        
+        // Currency with negative numbers in different formats
+        assert_eq!(test_format(1234.56, "$#,##0.00;($#,##0.00)").unwrap(), "$1,234.56");
+        assert_eq!(test_format(-1234.56, "$#,##0.00;($#,##0.00)").unwrap(), "($1,234.56)");
+        
+        // Advanced condition format with text
+        assert_eq!(
+            test_format(50, "[>100]\"Large: \"#,##0;[>50]\"Medium: \"#,##0;\"Small: \"#,##0").unwrap(),
+            "Small: 50"
+        );
+        assert_eq!(
+            test_format(75, "[>100]\"Large: \"#,##0;[>50]\"Medium: \"#,##0;\"Small: \"#,##0").unwrap(),
+            "Medium: 75"
+        );
+        assert_eq!(
+            test_format(150, "[>100]\"Large: \"#,##0;[>50]\"Medium: \"#,##0;\"Small: \"#,##0").unwrap(),
+            "Large: 150"
         );
     }
 

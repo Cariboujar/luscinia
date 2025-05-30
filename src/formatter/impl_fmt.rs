@@ -3,9 +3,7 @@
 use crate::formatter::LocaleConfig;
 use crate::formatter::datetime_fmt::format_datetime;
 use crate::formatter::error::FormatResult;
-use crate::formatter::number_fmt::{
-    format_fraction, format_nf_number, format_parenthesized_number,
-};
+use crate::formatter::number_fmt::{format_fraction, format_nf_number};
 use crate::formatter::text_fmt::format_text;
 use crate::types::common::*;
 use crate::types::elements::*;
@@ -226,9 +224,6 @@ fn format_number_or_frac_or_dt_or_text(
     match format {
         NumberOrFracOrDtOrText::General() => Ok(format!("{}", value)),
         NumberOrFracOrDtOrText::Number(number) => format_nf_number(value, number, locale),
-        NumberOrFracOrDtOrText::ParenthesizedNumber(number) => {
-            format_parenthesized_number(value, number, locale)
-        }
         NumberOrFracOrDtOrText::Fraction(fraction) => format_fraction(value, fraction, locale),
         NumberOrFracOrDtOrText::Datetime(datetime) => format_datetime(value, datetime, locale),
         NumberOrFracOrDtOrText::Text(text) => format_text(&value.to_string(), text, locale),
