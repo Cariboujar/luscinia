@@ -347,6 +347,7 @@ peg::parser! {
 
         rule nf_part_comp_oper() -> NFCondOperator // Line 26
             = ascii_equals_sign() { NFCondOperator::Equal }
+            / ascii_less_than_sign() ascii_greater_than_sign() { NFCondOperator::NotEqual }
             / ascii_greater_than_sign() ascii_equals_sign() {
                 NFCondOperator::GreaterThanOrEqual
             }
