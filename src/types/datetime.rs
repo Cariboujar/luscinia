@@ -17,7 +17,6 @@ pub struct NFDatetime {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum NFDatetimeComponent {
     Token(NFDateTimeToken),
-    SubSecond(SubSecondFormat),
     DateSeparator(char),
     TimeSeparator(char),
     AMPM(AmPm),
@@ -49,6 +48,7 @@ pub enum NFDateTimeToken {
     Hour(HourFormat),
     Minute(MinuteFormat),
     Second(SecondFormat),
+    SubSecond(SubSecondFormat),
     Abs(AbsTimeToken),
 }
 

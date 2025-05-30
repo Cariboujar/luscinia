@@ -160,6 +160,7 @@ peg::parser! {
             / d:nf_part_day() { NFDateTimeToken::Day(d) }
             / h:nf_part_hour() { NFDateTimeToken::Hour(h) }
             / s:nf_part_second() { NFDateTimeToken::Second(s) }
+            / ss:nf_part_sub_second() { NFDateTimeToken::SubSecond(ss) }
             / m:nf_part_month() { NFDateTimeToken::Month(m) }
             // / m:nf_part_minute() { NFDateTimeToken::Minute(m) }
             // minute can only be parsed in patterns below
@@ -211,10 +212,7 @@ peg::parser! {
                 }
 
             rule nf_datetime_component() -> NFDatetimeComponent // Custom
-                = s:nf_part_sub_second() { NFDatetimeComponent::SubSecond(s) }
-                / ds:intl_char_date_sep() { NFDatetimeComponent::DateSeparator(ds) }
-                / ts:intl_char_time_sep() { NFDatetimeComponent::TimeSeparator(ts) }
-                / ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
+                = ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
                 / lit_str:literal_string() { NFDatetimeComponent::Literal(lit_str) }
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
                 / ascii_comma() { NFDatetimeComponent::Literal(",".to_string()) }
