@@ -10,21 +10,21 @@ pub enum NumFormat {
     AnyNoCond(AnyNoCond),
     TwoParts(Any, Any),
     ThreeParts(Any, Any, AnyNoCond),
-    FourParts(Any, Any, AnyNoCond, Option<NumberOrFracOrDtOrText>),
+    FourParts(Any, Any, AnyNoCond, Option<FormatComponent>),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum AnyInner {
-    ConditionalData(Option<NFPartCondition>, NumberOrFracOrDtOrText),
+    ConditionalData(Option<NFPartCondition>, FormatComponent),
 }
 
 pub type Any = SectionWrapper<AnyInner>;
 pub type AnyNoText = SectionWrapper<AnyInner>;
-pub type AnyNoCond = SectionWrapper<NumberOrFracOrDtOrText>;
-pub type AnyNoTextNoCond = SectionWrapper<NumberOrFracOrDtOrText>;
+pub type AnyNoCond = SectionWrapper<FormatComponent>;
+pub type AnyNoTextNoCond = SectionWrapper<FormatComponent>;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
-pub enum NumberOrFracOrDtOrText {
+pub enum FormatComponent {
     General(),
     Number(NFNumber),
     Fraction(NFFraction),
