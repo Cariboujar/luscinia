@@ -153,15 +153,16 @@ peg::parser! {
                 = quiet!{e:ascii_capital_letter_e() sgn:(ascii_plus_sign() { Sign::Plus } / ascii_hyphen_minus() { Sign::Minus }) part2:nf_part_num() { (sgn, part2) }}
                 / expected!("scientific notation (E+n or E-n)")
 
-        rule nf_datatime_token() -> NFDateTimeToken // Line 8
-            = eg:nf_part_era_g() { NFDateTimeToken::EraG(eg) }
-            / ey:nf_part_era_year() { NFDateTimeToken::EraYear(ey) }
-            / y:nf_part_year() { NFDateTimeToken::Year(y) }
-            / m:nf_part_month() { NFDateTimeToken::Month(m) }
+        rule nf_datetime_token() -> NFDateTimeToken // Line 8
+            = y:nf_part_year() { NFDateTimeToken::Year(y) }
+            / g:nf_part_era_g() { NFDateTimeToken::EraG(g) }
+            / e:nf_part_era_year() { NFDateTimeToken::EraYear(e) }
             / d:nf_part_day() { NFDateTimeToken::Day(d) }
             / h:nf_part_hour() { NFDateTimeToken::Hour(h) }
-            / m:nf_part_minute() { NFDateTimeToken::Minute(m) }
             / s:nf_part_second() { NFDateTimeToken::Second(s) }
+            / m:nf_part_month() { NFDateTimeToken::Month(m) }
+            // / m:nf_part_minute() { NFDateTimeToken::Minute(m) } 
+            // minute can only be parsed in patterns below
             / cb:nf_part_calendar_b() { NFDateTimeToken::CalendarB(cb) }
             / a:nf_abs_time_token() { NFDateTimeToken::Abs(a) }
 
@@ -171,26 +172,54 @@ peg::parser! {
             / s:nf_part_abs_second() { AbsTimeToken::AbsSecond(s) }
 
         rule nf_datetime() -> NFDatetime // Line 10
-            = ampms:intl_ampm()* dt_tokens:nf_datatime_token()+ components:nf_datetime_component()* {
-                let all_components = dt_tokens.into_iter()
-                    .map(NFDatetimeComponent::Token)
-                    .chain(components)
+            = ampms:intl_ampm()* components:(dt_token_or_component())+ {
+                let all_components = components.into_iter().flatten()
                     .chain(ampms.into_iter().map(NFDatetimeComponent::AMPM))
                     .collect();
-
-                NFDatetime {
-                    components: all_components
-                }
+                NFDatetime { components: all_components }
             }
 
+            rule dt_token_or_component() -> Vec<NFDatetimeComponent>
+                = h_m:nf_pattern_hour_minute() { h_m }
+                / m_s:nf_pattern_minute_second() { m_s }
+                / m_d:nf_pattern_month_day() { m_d }
+                / token:nf_datetime_token() { vec![NFDatetimeComponent::Token(token)] }
+                / component:nf_datetime_component() { vec![component] }
+
+            rule nf_pattern_hour_minute() -> Vec<NFDatetimeComponent>
+                = h:nf_part_hour() components:nf_datetime_component()* m:nf_part_minute_format() {
+                    let mut result = vec![NFDatetimeComponent::Token(NFDateTimeToken::Hour(h))];
+                    result.extend(components);
+                    result.push(NFDatetimeComponent::Token(NFDateTimeToken::Minute(m)));
+                    result
+                }
+
+            rule nf_pattern_minute_second() -> Vec<NFDatetimeComponent>
+                = m:nf_part_minute_format() components:nf_datetime_component()* s:nf_part_second() {
+                    let mut result = vec![NFDatetimeComponent::Token(NFDateTimeToken::Minute(m))];
+                    result.extend(components);
+                    result.push(NFDatetimeComponent::Token(NFDateTimeToken::Second(s)));
+                    result
+                }
+
+            rule nf_pattern_month_day() -> Vec<NFDatetimeComponent>
+                = m:nf_part_minute_format() components:nf_datetime_component()* d:nf_part_day() {
+                    let mut result = vec![NFDatetimeComponent::Token(NFDateTimeToken::Month(MonthFormat::from_minute_format(m)))];
+                    result.extend(components);
+                    result.push(NFDatetimeComponent::Token(NFDateTimeToken::Day(d)));
+                    result
+                }
+
             rule nf_datetime_component() -> NFDatetimeComponent // Custom
-                = t:nf_datatime_token() { NFDatetimeComponent::Token(t) }
-                / s:nf_part_sub_second() { NFDatetimeComponent::SubSecond(s) }
-                / intl_char_date_sep() { NFDatetimeComponent::DateSeparator }
-                / intl_char_time_sep() { NFDatetimeComponent::TimeSeparator }
+                = s:nf_part_sub_second() { NFDatetimeComponent::SubSecond(s) }
+                / ds:intl_char_date_sep() { NFDatetimeComponent::DateSeparator(ds) }
+                / ts:intl_char_time_sep() { NFDatetimeComponent::TimeSeparator(ts) }
                 / ampm:intl_ampm() { NFDatetimeComponent::AMPM(ampm) }
                 / lit_str:literal_string() { NFDatetimeComponent::Literal(lit_str) }
                 / ascii_space() { NFDatetimeComponent::Literal(" ".to_string()) }
+                // we can treat comma as literal in dt
+                / ascii_comma() { NFDatetimeComponent::Literal(",".to_string()) }
+                / bc:unmatched_literal_char() { NFDatetimeComponent::Literal(bc.to_string()) }
 
         rule nf_text() -> NFText // Line 11
             = elements:(nf_text_element())+ !nf_text_element() {
@@ -285,6 +314,10 @@ peg::parser! {
             }
 
         rule nf_part_minute() -> MinuteFormat // Line 20
+            = "mm" { MinuteFormat::TwoChar }
+            / "m" { MinuteFormat::OneChar }
+
+        rule nf_part_minute_format() -> MinuteFormat // Helper rule to parse m/mm without interpreting it
             = "mm" { MinuteFormat::TwoChar }
             / "m" { MinuteFormat::OneChar }
 
@@ -467,12 +500,12 @@ peg::parser! {
         rule intl_char_numgrp_sep() -> () // Line 46
             = ascii_comma()
 
-        rule intl_char_date_sep() -> () // Line 47
-            = ascii_solidus()
-            / ascii_hyphen_minus()
+        rule intl_char_date_sep() -> char // Line 47
+            = ascii_solidus() { '/' }
+            / ascii_hyphen_minus() { '-' }
 
-        rule intl_char_time_sep() -> () // Line 48
-            = ascii_colon()
+        rule intl_char_time_sep() -> char // Line 48
+            = ascii_colon() { ':' }
 
         rule intl_color() -> DefinedColor // Line 49
             = "Black" { DefinedColor::Black }
@@ -496,7 +529,7 @@ peg::parser! {
             = c:(['\u{0000}'..='\u{FFFF}']) { c }
 
         rule unmatched_literal_char() -> char
-            = !nf_general() !nf_number() !nf_datatime_token() !intl_ampm()
+            = !nf_general() !nf_number() !nf_datetime_token() !intl_ampm()
             !nf_abs_time_token() !nf_fraction() !nf_parenthesized_number()
             c:utf16_any() { c }
 
