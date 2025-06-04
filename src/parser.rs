@@ -62,11 +62,19 @@ peg::parser! {
                 )
             }
             / f:nf_any_no_cond() { NumFormat::AnyNoCond(f) }
-            / t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? cond:nf_part_cond() g:nf_general() {
+            / special_prefix:nf_part_special_prefix()* locale:nf_part_locale_id()? color:nf_part_color()? cond:nf_part_cond() g:nf_general() {
                 NumFormat::ConditionalGeneral(SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
                     locale,
                     color,
+                    special_prefix,
+                    inner: (cond, g),
+                })
+            }
+            / special_prefix:nf_part_special_prefix()* locale:nf_part_locale_id()? color:nf_part_color()? cond:nf_part_cond() g:nf_general() {
+                NumFormat::ConditionalGeneral(SectionWrapper {
+                    locale,
+                    color,
+                    special_prefix,
                     inner: (cond, g),
                 })
             }
@@ -91,52 +99,32 @@ peg::parser! {
                 }
 
         rule nf_any() -> SectionWrapper<AnyInner> // Line 2
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:format_component() {
+            = special_prefix:nf_part_special_prefix()* locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:format_component() {
                 SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
                     locale,
                     color,
+                    special_prefix,
                     inner: AnyInner::ConditionalData(condition, data),
                 }
             }
 
-        // rule nf_any_no_text() -> AnyNoText // Line 3
-        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? condition:nf_part_cond()? data:format_component() {
-        //         SectionWrapper {
-        //             is_thai_prefixed: t_prefix.is_some(),
-        //             locale,
-        //             color,
-        //             inner: AnyInner::ConditionalData(condition, data),
-        //         }
-        //     }
-
         rule nf_any_no_cond() -> AnyNoCond // Line 4
-            = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:format_component() {
+            = special_prefix:nf_part_special_prefix()* locale:nf_part_locale_id()? color:nf_part_color()? data:format_component() {
                 SectionWrapper {
-                    is_thai_prefixed: t_prefix.is_some(),
                     locale,
                     color,
+                    special_prefix,
                     inner: data,
                 }
             }
             / f:nf_general() {
                 SectionWrapper {
-                    is_thai_prefixed: false,
                     locale: None,
                     color: None,
+                    special_prefix: vec![],
                     inner: FormatComponent::General(),
                 }
             }
-
-        // rule nf_any_no_text_no_cond() -> AnyNoTextNoCond // Line 5
-        //     = t_prefix:("t"?) locale:nf_part_locale_id()? color:nf_part_color()? data:format_component() {
-        //         SectionWrapper {
-        //             is_thai_prefixed: t_prefix.is_some(),
-        //             locale,
-        //             color,
-        //             inner: data,
-        //         }
-        //     }
 
         rule nf_general() -> NFGeneral // Line 6
             = intl_numfmt_general() { NFGeneral {} }
@@ -240,21 +228,25 @@ peg::parser! {
                 / bc:unmatched_literal_char() { TextFormatElement::LiteralString(bc.to_string()) }
 
         rule nf_fraction() -> NFFraction // Line 12
-            = int_part:nf_num_only() sep:nf_frac_separator()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
+            = prefix:nf_fraction_preffix_or_suffix_element()* int_part:nf_num_only() sep:nf_frac_separator()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() suffix:nf_fraction_preffix_or_suffix_element()* ampm:intl_ampm()* {
                 NFFraction {
+                    prefix,
                     integer_part: Some(int_part),
                     separator: Some(sep),
                     numerator: num,
                     denominator: denom,
+                    suffix,
                     ampm_part: ampm,
                 }
             }
-            / num:nf_part_fraction() ascii_solidus() denom:nf_part_fraction() ampm:intl_ampm()* {
+            / prefix:nf_fraction_preffix_or_suffix_element()* num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() suffix:nf_fraction_preffix_or_suffix_element()* ampm:intl_ampm()* {
                 NFFraction {
+                    prefix,
                     integer_part: None,
                     separator: None,
                     numerator: num,
                     denominator: denom,
+                    suffix,
                     ampm_part: ampm,
                 }
             }
@@ -265,10 +257,20 @@ peg::parser! {
                 }
 
             rule nf_frac_separator() -> DigitPosOrOther<Percent>
-                = lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
+                = currency:nf_part_locale_id() { DigitPosOrOther::Currency(currency) }
+                / lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
                 / ec:literal_char() { DigitPosOrOther::EscapedChar(ec) }
                 / lcs:literal_char_space() { DigitPosOrOther::LiteralCharSpace(lcs) }
                 / ascii_space()+ { DigitPosOrOther::LiteralCharSpace(' ') }
+
+            rule nf_fraction_preffix_or_suffix_element() -> DigitPosOrOther<Percent>
+                = ascii_percent_sign() { DigitPosOrOther::Other(Percent {}) }
+                / currency:nf_part_locale_id() { DigitPosOrOther::Currency(currency) }
+                / lcs_char:literal_char_space() { DigitPosOrOther::LiteralCharSpace(lcs_char) }
+                / lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
+                / fill_char:literal_char_repeat() { DigitPosOrOther::FillChar(fill_char) }
+                / esc_char:literal_char() { DigitPosOrOther::EscapedChar(esc_char) }
+                / bare_char:unmatched_literal_char() { DigitPosOrOther::LiteralString(bare_char.to_string()) }
 
         rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
             = tks:nf_format_element()+ {
@@ -287,6 +289,7 @@ peg::parser! {
             rule nf_format_element() -> DigitPosOrOther<Percent>
                 = t:nf_part_num_token2() { DigitPosOrOther::Digit(t) }
                 / ascii_percent_sign() { DigitPosOrOther::Other(Percent {}) }
+                / currency:nf_part_locale_id() { DigitPosOrOther::Currency(currency) }
                 / lcs_char:literal_char_space() { DigitPosOrOther::LiteralCharSpace(lcs_char) }
                 / lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
                 / fill_char:literal_char_repeat() { DigitPosOrOther::FillChar(fill_char) }
@@ -929,5 +932,31 @@ peg::parser! {
                     |acc, &d| acc * 10 + d as u128
                 )
             }
+
+        rule nf_part_special_prefix() -> String
+            = "t" { "t".to_string() }
+            / "[" prefix:known_special_prefix() "]" { prefix }
+
+        rule known_special_prefix() -> String
+            = "ENG" { "ENG".to_string() }
+            / "DBNum1" { "DBNum1".to_string() }
+            / "DBNum2" { "DBNum2".to_string() }
+            / "DBNum3" { "DBNum3".to_string() }
+            / "HIJ" { "HIJ".to_string() }
+            / "JPN" { "JPN".to_string() }
+            / "TWN" { "TWN".to_string() }
+            / "MAGENTA" { "MAGENTA".to_string() }
+            / "WHITE" { "WHITE".to_string() }
+            / "CYAN" { "CYAN".to_string() }
+            / "BLACK" { "BLACK".to_string() }
+            / "BLUE" { "BLUE".to_string() }
+            / "GREEN" { "GREEN".to_string() }
+            / "YELLOW" { "YELLOW".to_string() }
+            / !intl_color() !nf_part_str_color() !['>'] !['<'] !['='] !['$'] chars:utf16_any()+ {
+                chars.into_iter().collect()
+            }
+
+        rule unknown_prefix_char() -> char
+            = ![']'] c:utf16_any() { c }
     }
 }

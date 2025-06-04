@@ -93,8 +93,8 @@ mod tests {
         }
         
         if !errors.is_empty() {
-            std::fs::write("failed_formats.txt", errors.join("\n")).unwrap();
-            println!("Wrote {} errors to failed_formats.txt", errors.len());
+            std::fs::write("nfp_failed_formats.txt", errors.join("\n")).unwrap();
+            println!("Wrote {} errors to nfp_failed_formats.txt", errors.len());
         }
     }
 
@@ -120,8 +120,63 @@ mod tests {
         }
         
         if !errors.is_empty() {
-            std::fs::write("failed_formats.txt", errors.join("\n")).unwrap();
-            println!("Wrote {} errors to failed_formats.txt", errors.len());
+            std::fs::write("andersnm_failed_formats.txt", errors.join("\n")).unwrap();
+            println!("Wrote {} errors to andersnm_failed_formats.txt", errors.len());
+        }
+    }
+
+    #[test]
+    fn test_special_prefixes() {
+        let test_cases = vec![
+            "[ENG][$-409]d\\-mmm;@",
+            "[Red]#.##",
+            "[MAGENTA]0.00",
+            "#\\ ??/100;[Red]\\(#\\ ??/16\\)",
+        ];
+        
+        for case in test_cases {
+            println!("Testing format: {}", case);
+            let res = parse_fmtstr(case);
+            
+            match &res {
+                Ok(format) => {
+                    println!(
+                        "Successfully parsed:\n{}",
+                        serde_json::to_string_pretty(format).unwrap()
+                    );
+                },
+                Err(e) => {
+                    println!("Error parsing: {:?}", e);
+                }
+            }
+            println!("---");
+        }
+    }
+
+    #[test]
+    fn test_failed_formats_sample() {
+        let test_cases = vec![
+            "[DBNum1][$-804]AM/PMh\"时\"mm\"分\";@",
+            "[HIJ][$-2060401]d/mm/yyyy\\ h:mm\\ AM/PM;@", 
+            "[JPN][$-411]gggyy\"年\"m\"月\"d\"日\"\\ dddd;@",
+            "[TWN][DBNum1][$-404]y\"年\"m\"月\"d\"日\";@",
+            "[WHITE]0.0",
+            "[MAGENTA]0.00",
+        ];
+        
+        for case in test_cases {
+            println!("Testing format: {}", case);
+            let res = parse_fmtstr(case);
+            
+            match &res {
+                Ok(_) => {
+                    println!("✅ Successfully parsed");
+                },
+                Err(e) => {
+                    println!("❌ Error parsing: {:?}", e);
+                }
+            }
+            println!("---");
         }
     }
 }

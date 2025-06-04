@@ -1,4 +1,4 @@
-use crate::types::datetime::AmPm;
+use crate::types::{datetime::AmPm, PartLocaleID};
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -46,6 +46,7 @@ pub enum DigitPos {
 pub enum DigitPosOrOther<T> {
     Digit(DigitPos),
     Other(T),
+    Currency(PartLocaleID),
     LiteralCharSpace(char),
     LiteralString(String),
     FillChar(char),

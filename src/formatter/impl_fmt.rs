@@ -254,12 +254,12 @@ fn apply_section_decorations<T>(
         }
     }
 
-    // Apply Thai year prefix if present
-    if section.is_thai_prefixed {
-        // In real implementation, this would convert to Thai year
-        // For now, we'll just add a prefix
-        result = format!("[THAI]{}", result);
-    }
+    // // Apply Thai year prefix if present
+    // if section.is_thai_prefixed {
+    //     // In real implementation, this would convert to Thai year
+    //     // For now, we'll just add a prefix
+    //     result = format!("[THAI]{}", result);
+    // }
 
     Ok(result)
 }
@@ -277,9 +277,9 @@ fn apply_section_wrapper_text(
 /// Apply formatting for a bare NFText (not wrapped in SectionWrapper)
 fn apply_bare_text_formatting(value: &str, text: NFText, locale: &LocaleConfig) -> FormatResult {
     let wrapper = SectionWrapper {
-        is_thai_prefixed: false,
         locale: None,
         color: None,
+        special_prefix: vec![],
         inner: text,
     };
     apply_section_wrapper_text(value, &wrapper, locale)

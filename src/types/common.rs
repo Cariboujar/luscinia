@@ -3,9 +3,9 @@ use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct SectionWrapper<T> {
-    pub is_thai_prefixed: bool,
     pub locale: Option<PartLocaleID>,
     pub color: Option<NFPartColor>,
+    pub special_prefix: Vec<String>,  // 统一存储 "t", "ENG", "DBNum1", "HIJ", "JPN", "TWN" 等
     pub inner: T,
 }
 
