@@ -17,6 +17,7 @@ pub struct NFNumber {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct NFFraction {
     pub numerator: Vec<FracToken>,
+    pub separator: Option<Vec<DigitPosOrOther<Percent>>>,
     pub denominator: Vec<FracToken>,
     pub integer_part: Option<Vec<DigitPosOrOther<Percent>>>,
     pub ampm_part: Vec<AmPm>,

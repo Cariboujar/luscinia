@@ -25,7 +25,7 @@ impl<'source> NumfmtParser<'source> {
 // https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oe376/0e59abdb-7f4e-48fc-9b89-67832fa11789
 peg::parser! {
     grammar numfmt_parser() for str {
-        
+
         rule traced<T>(e: rule<T>) -> T =
             &(input:$([_]*) {
                 #[cfg(feature = "trace")]
@@ -36,7 +36,7 @@ peg::parser! {
                 println!("[PEG_TRACE_STOP]");
                 e.ok_or("")
             }
-        
+
         pub rule toplevel() -> NumFormat = traced(<all()>)
 
         pub rule all() -> NumFormat // Line 1
@@ -240,9 +240,10 @@ peg::parser! {
                 / bc:unmatched_literal_char() { TextFormatElement::LiteralString(bc.to_string()) }
 
         rule nf_fraction() -> NFFraction // Line 12
-            = int_part:nf_num_only() ascii_space()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
+            = int_part:nf_num_only() sep:nf_frac_separator()+ num:nf_part_fraction() ascii_space()* ascii_solidus() ascii_space()* denom:nf_part_fraction() ampm:intl_ampm()* {
                 NFFraction {
                     integer_part: Some(int_part),
+                    separator: Some(sep),
                     numerator: num,
                     denominator: denom,
                     ampm_part: ampm,
@@ -251,6 +252,7 @@ peg::parser! {
             / num:nf_part_fraction() ascii_solidus() denom:nf_part_fraction() ampm:intl_ampm()* {
                 NFFraction {
                     integer_part: None,
+                    separator: None,
                     numerator: num,
                     denominator: denom,
                     ampm_part: ampm,
@@ -261,6 +263,12 @@ peg::parser! {
                 = tks:nf_part_num_token1()+ {
                     tks.into_iter().map(|t| DigitPosOrOther::Digit(DigitPos::Digit(t))).collect()
                 }
+
+            rule nf_frac_separator() -> DigitPosOrOther<Percent>
+                = lit_str:literal_string() { DigitPosOrOther::LiteralString(lit_str) }
+                / ec:literal_char() { DigitPosOrOther::EscapedChar(ec) }
+                / lcs:literal_char_space() { DigitPosOrOther::LiteralCharSpace(lcs) }
+                / ascii_space()+ { DigitPosOrOther::LiteralCharSpace(' ') }
 
         rule nf_part_num() -> Vec<DigitPosOrOther<Percent>> // Line 13
             = tks:nf_format_element()+ {
@@ -290,7 +298,9 @@ peg::parser! {
 
         rule nf_part_year() -> YearFormat // Line 15
             = "yyyy" { YearFormat::FourDigit }
+            / "YYYY" { YearFormat::FourDigit }
             / "yy" { YearFormat::TwoDigit }
+            / "YY" { YearFormat::TwoDigit }
 
         rule nf_part_era_g() -> EraFormatG // Custom
             = "g" { EraFormatG::OneDigit }
@@ -310,15 +320,23 @@ peg::parser! {
             = m:(ascii_small_letter_m()*<1,5>) {
                 MonthFormat(m.len() as u8)
             }
+            / m:(ascii_capital_letter_m()*<1,5>) {
+                MonthFormat(m.len() as u8)
+            }
 
         rule nf_part_day() -> DayFormat // Line 17
             = d:(ascii_small_letter_d()*<1,4>) {
                 DayFormat(d.len() as u8)
             }
+            / d:(ascii_capital_letter_d()*<1,4>) {
+                DayFormat(d.len() as u8)
+            }
 
         rule nf_part_hour() -> HourFormat // Line 18
             = "hh" { HourFormat::TwoChar }
+            / "HH" { HourFormat::TwoChar }
             / "h" { HourFormat::OneChar }
+            / "H" { HourFormat::OneChar }
 
         rule nf_part_abs_hour() -> AbsHourFormat // Line 19
             = ascii_left_square_bracket() h:ascii_small_letter_h()+ ascii_right_square_bracket() {
@@ -327,11 +345,15 @@ peg::parser! {
 
         rule nf_part_minute() -> MinuteFormat // Line 20
             = "mm" { MinuteFormat::TwoChar }
+            / "MM" { MinuteFormat::TwoChar }
             / "m" { MinuteFormat::OneChar }
+            / "M" { MinuteFormat::OneChar }
 
         rule nf_part_minute_format() -> MinuteFormat // Helper rule to parse m/mm without interpreting it
             = "mm" { MinuteFormat::TwoChar }
+            / "MM" { MinuteFormat::TwoChar }
             / "m" { MinuteFormat::OneChar }
+            / "M" { MinuteFormat::OneChar }
 
         rule nf_part_abs_minute() -> AbsMinuteFormat // Line 21
             = ascii_left_square_bracket() m:ascii_small_letter_m()+ ascii_right_square_bracket() {
@@ -340,7 +362,9 @@ peg::parser! {
 
         rule nf_part_second() -> SecondFormat // Line 22
             = "ss" { SecondFormat::TwoChar }
+            / "SS" { SecondFormat::TwoChar }
             / "s" { SecondFormat::OneChar }
+            / "S" { SecondFormat::OneChar }
 
         rule nf_part_abs_second() -> AbsSecondFormat // Line 23
             = ascii_left_square_bracket() s:ascii_small_letter_s()+ ascii_right_square_bracket() {
@@ -904,6 +928,6 @@ peg::parser! {
                     0u128,
                     |acc, &d| acc * 10 + d as u128
                 )
-            }        
+            }
     }
 }
